@@ -8,7 +8,7 @@ games still trade. Rank prefers a tight book and a lower taker fee — not the
 """
 from __future__ import annotations
 
-VERSION = "v17"
+VERSION = "v18"
 RING_USD = 10.0
 CLIP_USD = 2.0
 MAX_USD = 2.0
@@ -135,13 +135,27 @@ def rank(row: dict) -> float | None:
     return 100.0 - spr * 200.0 - fee * 800.0 + min(tick, 3.0) * 2.0 + live_bonus
 
 
+def should_ttr(minutes_to_start) -> bool:
+    """Dump only if later and kickoff already passed. A 50m-out soon ticket is not TTR."""
+    try:
+        return float(minutes_to_start) <= 0
+    except (TypeError, ValueError):
+        return True
+
+
 def watch_exit(avg: float, bid: float, peak: float, live: bool) -> str | None:
-    """Cut losers at −3¢. Trail winners after +5¢; give back 3¢ from peak."""
+    """Cut losers at −3¢. Trail winners after +5¢; give back 3¢ from peak.
+
+    Never EXIT_UP at or below entry — that sold today's "winners" as fee losses.
+    Stop still owns the loser. Same entries.
+    """
     if not (avg and bid):
         return None
     if bid <= avg - HARD_STOP:
         return "EXIT_DOWN"
     if not live:
+        return None
+    if bid <= avg:
         return None
     if peak >= avg + TRAIL_ARM and bid <= peak - TRAIL_GIVEBACK:
         return "EXIT_UP"

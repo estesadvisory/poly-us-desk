@@ -7,7 +7,7 @@ You are sitting at a shell. Python trades. You type commands.
 ```bash
 cd ~/repos/poly-us-desk
 test -f ~/.grok/secrets/polymarket-us.env || { echo "NO ENV"; exit 1; }
-test "$(cat VERSION)" = "v17" || { echo "VERSION mismatch"; cat VERSION; exit 1; }
+test "$(cat VERSION)" = "v18" || { echo "VERSION mismatch"; cat VERSION; exit 1; }
 python3 desk.py
 ```
 
@@ -55,6 +55,6 @@ Do not edit a running child and expect it to pick up changes without `reload` / 
 - `books.json` — `open: []` means flat
 - `$10` never trades. Clip $2. Working = BP − 10 (ticket cap, not a 2-slot freeze).
 - LIVE or SOON (≤45m) `aec-`, all US sports, 12–88¢ book, not dumping. Overdue NS stays live 90m.
-- Stop −3¢. Trail +5¢. No scratch sells. No 3-ways.
+- Stop −3¢. Trail +5¢, give back 3¢, never sell a winner at/under entry. No scratch. No 3-ways.
 
 US only. Never print secrets.

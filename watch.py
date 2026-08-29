@@ -76,7 +76,7 @@ def cut_now(slug):
 
 
 def tape_sets():
-    """(later, live). Missing from tape ≠ cut (research hole). Stale tape → (None, None) = treat LIVE."""
+    """(later_rows, live). Missing from tape ≠ cut. Stale tape → (None, None) = treat LIVE."""
     if not TAPE.exists():
         return None, None
     try:
@@ -87,7 +87,7 @@ def tape_sets():
         if age > risk.TAPE_STALE_SEC:
             return None, None
         live = {r.get("slug") for r in (t.get("live") or []) if r.get("slug")}
-        later = {r.get("slug") for r in (t.get("later") or []) if r.get("slug")}
+        later = {r.get("slug"): r for r in (t.get("later") or []) if r.get("slug")}
         return later, live
     except Exception:
         return None, None
@@ -117,6 +117,7 @@ def main():
     last_cut = {}
     peak = load_peak()
     last_hb = 0.0
+    pos = {}
     while True:
         try:
             pos = signed("GET", "/v1/portfolio/positions", e).get("positions") or {}
@@ -137,26 +138,26 @@ def main():
                     continue
                 peak[slug] = max(peak.get(slug, bid), bid)
                 now = time.time()
-                if now - last_cut.get(slug, 0) < 20:
+                if now - last_cut.get(slug, 0) < 8:
                     continue
-                if later is not None and slug in later:
+                later_row = (later or {}).get(slug) if later is not None else None
+                if later_row is not None and risk.should_ttr(later_row.get("minutes_to_start")):
                     print(f"EXIT_TTR {slug}", flush=True)
                     if cut_now(slug):
                         last_cut[slug] = now
-                        peak.pop(slug, None)
                     continue
-                # Missing from tape ≠ later. Only LATER list is TTR. Else trail as live.
-                is_live = True if live_set is None else (slug in live_set or (later is not None and slug not in later))
+                # Missing from tape ≠ later. Pregame later is hold. Else trail as live.
+                is_live = True if live_set is None else (slug in live_set or later_row is None)
                 side = risk.watch_exit(avg, bid, peak[slug], is_live)
                 if side:
                     print(f"{side} {slug} bid={bid} avg={avg} peak={peak[slug]} live={is_live}", flush=True)
                     if cut_now(slug):
                         last_cut[slug] = now
-                        peak.pop(slug, None)
             save_peak(peak)
+            time.sleep(4)
         except Exception as ex:
             print(f"WATCH_ERR {type(ex).__name__}", flush=True)
-        time.sleep(4)
+            time.sleep(0.5 if pos else 4)
 
 
 if __name__ == "__main__":
