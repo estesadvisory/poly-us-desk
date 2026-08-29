@@ -34,12 +34,12 @@ def books():
     return json.loads(line[-1])
 
 
-def tape_age_sec() -> float:
+def tape_full_age_sec() -> float:
     if not TAPE.exists():
         return 1e9
     try:
         t = json.loads(TAPE.read_text())
-        asof = t.get("asof") or ""
+        asof = t.get("full_asof") or t.get("asof") or ""
         ts = datetime.fromisoformat(asof.replace("Z", "+00:00"))
         return (datetime.now(timezone.utc) - ts).total_seconds()
     except Exception:
@@ -47,11 +47,11 @@ def tape_age_sec() -> float:
 
 
 def refresh_tape():
-    age = tape_age_sec()
+    age = tape_full_age_sec()
     args = [str(DESK / "research.py")]
-    if age < risk.HOT_MAX_AGE_SEC:
+    if 0 <= age < risk.HOT_MAX_AGE_SEC:
         args.append("--hot")
-    subprocess.run(["python3", *args], capture_output=True, text=True, timeout=40)
+    subprocess.run(["python3", *args], capture_output=True, text=True, timeout=60)
 
 
 def pick_buy(tape, ban, open_slugs):

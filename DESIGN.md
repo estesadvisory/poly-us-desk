@@ -19,7 +19,7 @@ orders.lock  →  one buy or cut at a time
 ## Market watch (efficient)
 
 ```
-research.py           full scan ~20s   11 leagues → ≤40 slugs → 12-way BBO
+research.py           full scan ~20s   all operational US leagues + ATP/WTA → live/soon first, ≤100 BBO
 research.py --hot     8s               re-BBO live/soon slugs only (no league crawl)
 intent.py             picks BUY        uses --hot if tape <25s old
 loop.py               cadence          8s while any live 18–42¢ exists, else 20s

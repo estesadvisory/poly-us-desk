@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Fast public tape. No LLM. Target <15s. Writes ~/.grok/desk/tape.md
-  python3 research.py          # full league scan
+"""Fast public tape. No LLM. Target <20s. Writes ~/.grok/desk/tape.md
+  python3 research.py          # all operational US leagues
   python3 research.py --hot    # re-BBO live/soon slugs only
 """
 from __future__ import annotations
@@ -12,7 +12,12 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))
 import risk
 
 PUB = "https://gateway.polymarket.us"
-FOCUS = ["mlb", "nfl", "cfb", "wnba", "epl", "lal", "mls", "sea", "bun", "ucl", "ufc"]
+# US venue, all operational leagues. Hardcoded FOCUS was the starve.
+EXTRA_LEAGUES = ("atp", "wta")  # events exist; sometimes missing from /v2/leagues
+EVENT_LIMIT = 40
+BBO_CAP = 100
+LIVE_KEEP = 24
+SOON_KEEP = 12
 SOON_MIN = risk.SOON_MIN  # capital may sit this long; not 90
 SKIP = Path.home() / ".grok/desk/skip_slugs.txt"
 OUT = Path.home() / ".grok/desk/tape.md"
@@ -61,6 +66,31 @@ def bbo(slug):
         return {"slug": slug, "error": True}
 
 
+def league_slugs():
+    slugs = []
+    try:
+        rows = get("/v2/leagues", {"limit": 200}).get("leagues") or []
+        slugs = [x.get("slug") for x in rows if x.get("isOperational") and x.get("slug")]
+    except Exception:
+        slugs = []
+    out = []
+    seen = set()
+    for s in list(slugs) + list(EXTRA_LEAGUES):
+        if not s or s in seen:
+            continue
+        seen.add(s)
+        out.append(s)
+    return out
+
+
+def fetch_league(lg):
+    try:
+        evs = get(f"/v2/leagues/{lg}/events", {"limit": EVENT_LIMIT}).get("events") or []
+        return lg, evs, None
+    except Exception as ex:
+        return lg, [], type(ex).__name__
+
+
 def picks(markets):
     out = []
     for m in markets or []:
@@ -87,11 +117,12 @@ def main():
     live, soon_l, nxt, reject = [], [], [], []
     slugs = []
     meta = {}
-    for lg in FOCUS:
-        try:
-            evs = get(f"/v2/leagues/{lg}/events", {"limit": 10}).get("events") or []
-        except Exception as e:
-            reject.append(f"{lg} fetch fail")
+    leagues = league_slugs()
+    with concurrent.futures.ThreadPoolExecutor(max_workers=16) as ex:
+        fetched = list(ex.map(fetch_league, leagues))
+    for lg, evs, err in fetched:
+        if err:
+            reject.append(f"{lg} fetch fail {err}")
             continue
         for e in evs:
             st = e.get("startTime") or ""
@@ -130,7 +161,22 @@ def main():
                     "elapsed": e.get("elapsed"),
                     "score": e.get("score"),
                 }
-    slugs = list(dict.fromkeys(slugs))[:40]
+    ordered = []
+    seen_s = set()
+    for want_live, want_soon in ((True, False), (False, True), (False, False)):
+        for s in slugs:
+            if s in seen_s:
+                continue
+            m = meta.get(s) or {}
+            if want_live and not m.get("live"):
+                continue
+            if want_soon and (m.get("live") or not m.get("soon")):
+                continue
+            if not want_live and not want_soon and (m.get("live") or m.get("soon")):
+                continue
+            seen_s.add(s)
+            ordered.append(s)
+    slugs = ordered[:BBO_CAP]
     prev = {}
     if QUOTES.exists():
         try:
@@ -191,14 +237,14 @@ def main():
     nxt.sort(key=lambda r: (r.get("start") or "", r.get("spr") or 9))
     lines = [
         f"# tape {now.strftime('%Y-%m-%d %H:%M')}Z",
-        f"live {len(live)} soon(≤{SOON_MIN}m) {len(soon_l)} later {len(nxt)} scanned {len(slugs)}",
+        f"live {len(live)} soon(≤{SOON_MIN}m) {len(soon_l)} later {len(nxt)} scanned {len(slugs)} leagues {len(leagues)}",
         "",
         "## LIVE",
     ]
-    for r in live[:8]:
+    for r in live[:LIVE_KEEP]:
         lines.append(f"- {r['kind']} {r['slug']} {r['lg']} {r['period']} {r.get('score')} rank {r.get('rank')} d {r.get('delta_c')}/{r.get('delta2_c')} bid {r['bid']} last {r.get('last')} ask {r['ask']} | {r['title']}")
     lines += ["", f"## SOON ≤{SOON_MIN}m (ok to wait)"]
-    for r in soon_l[:6]:
+    for r in soon_l[:SOON_KEEP]:
         lines.append(f"- {r['slug']} in {r.get('minutes_to_start')}m score {r.get('score')} bid {r['bid']} ask {r['ask']} spr {r['spr']} | {r['title']}")
     lines += ["", "## LATER (do not buy — cash waits)"]
     for r in nxt[:4]:
@@ -212,12 +258,14 @@ def main():
     ]
     payload = {
         "asof": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "live": live[:8],
-        "soon": soon_l[:6],
+        "live": live[:LIVE_KEEP],
+        "soon": soon_l[:SOON_KEEP],
         "later": nxt[:4],
         "ttr": ttr,
         "reject": reject[:8],
         "scanned": len(slugs),
+        "leagues": len(leagues),
+        "full_asof": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
     }
     OUTJ.write_text(json.dumps(payload, indent=2) + "\n")
     QUOTES.write_text(json.dumps(now_q, indent=2) + "\n")
@@ -293,13 +341,15 @@ def hot():
     live.sort(key=lambda r: (-(r.get("rank") or -1), r.get("spr") or 9))
     payload = {
         "asof": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-        "live": live[:8],
-        "soon": soon_l[:6],
+        "live": live[:LIVE_KEEP],
+        "soon": soon_l[:SOON_KEEP],
         "later": tape.get("later") or nxt[:4],
         "ttr": tape.get("ttr") or [],
         "reject": reject[:8],
         "scanned": len(slugs),
         "hot": True,
+        "full_asof": tape.get("full_asof"),
+        "leagues": tape.get("leagues"),
     }
     OUTJ.write_text(json.dumps(payload, indent=2) + "\n")
     merged = prev
@@ -311,7 +361,7 @@ def hot():
         "",
         "## LIVE",
     ]
-    for r in live[:8]:
+    for r in live[:LIVE_KEEP]:
         lines.append(
             f"- {r.get('kind')} {r['slug']} {r.get('lg')} {r.get('period')} {r.get('score')} "
             f"rank {r.get('rank')} d {r.get('delta_c')}/{r.get('delta2_c')} bid {r.get('bid')} "
