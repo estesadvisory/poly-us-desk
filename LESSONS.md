@@ -1,4 +1,4 @@
-# Venue lessons 2026-08-28 → 08-29 — live policy **v11**
+# Venue lessons 2026-08-28 → 08-29 — live policy **v12**
 
 Source: `GET /v1/portfolio/activities` (cost already includes taker fee). Not Chrome cash, not memory.
 
@@ -36,7 +36,7 @@ Winners are **live names that already moved a dime**, not 1¢ scalps. AZ 5.7¢ i
 
 US sports `feeCoefficient` 0.06. Taker fee/share ≈ `0.06 × p × (1−p)` ≈ **1.5¢/side at 50¢**, ~3¢ round-trip. A +1¢ / −1¢ scalp on a $2–$5 clip cannot have positive EV. Stop −1¢ and reap +2¢ were both inside the fee.
 
-Live policy is **v11**. Below is how we got there (superseded).
+Live policy is **v12**. Below is how we got there (superseded).
 
 ## v7 (superseded)
 
@@ -59,7 +59,11 @@ v7 would have **sold PHI at +8¢**. The paid trades were dimes, so v8 **trails**
 
 One loop (buyer), one watch (seller), one CoS TUI. Order lock. Session $2 circuit. Peak every 4s. TTR only LATER.
 
-## v11 (live policy — GO.md in a fresh TUI)
+## v11 (superseded)
 
 Dogs **18–42¢ only** (no fav band). Loop **never sells**. `nohup` in GO.md. Watch owns every exit.
+
+## v12 (live policy)
+
+Two **last-trade** prints, not bid-only. Event must have a **score**. 0–0 in Q1 is not a buy. Print within 1¢ of bid. Cut at bid on a 1¢ book.
 

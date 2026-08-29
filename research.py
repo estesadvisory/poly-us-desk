@@ -125,6 +125,7 @@ def main():
                     "minutes_to_start": round(mins, 1),
                     "kind": kind,
                     "elapsed": e.get("elapsed"),
+                    "score": e.get("score"),
                 }
     slugs = list(dict.fromkeys(slugs))[:40]
     prev = {}
@@ -143,27 +144,30 @@ def main():
         m = meta[s]
         ask, bid, spr = q.get("ask") or 0, q.get("bid") or 0, q.get("spr")
         old = prev.get(s) or {}
-        hist = [x for x in (old.get("bids") or []) if x]
-        if old.get("bid") and (not hist or hist[-1] != old.get("bid")):
-            hist.append(old["bid"])
+        last = q.get("last") or 0
+        hist = [x for x in (old.get("lasts") or []) if x]
+        if old.get("last") and (not hist or hist[-1] != old.get("last")):
+            hist.append(old["last"])
         hist = hist[-3:]
-        delta_c = round((bid - hist[-1]) * 100, 2) if hist else None
-        delta2_c = round((hist[-1] - hist[-2]) * 100, 2) if len(hist) >= 2 else None
-        q["delta_c"] = delta_c
-        q["delta2_c"] = delta2_c
-        q["prev_bid"] = hist[-1] if hist else None
+        last_delta_c = round((last - hist[-1]) * 100, 2) if hist and last else None
+        last_delta2_c = round((hist[-1] - hist[-2]) * 100, 2) if len(hist) >= 2 else None
+        q["last_delta_c"] = last_delta_c
+        q["last_delta2_c"] = last_delta2_c
+        q["delta_c"] = last_delta_c
+        q["delta2_c"] = last_delta2_c
         now_q[s] = {
             "bid": bid,
             "ask": ask,
+            "last": last,
             "ts": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "bids": (hist + [bid])[-3:],
+            "lasts": (hist + [last])[-3:] if last else hist,
         }
         row = {**m, **q}
         if m["kind"] != "aec":
             reject.append(f"{s} 3way")
             continue
         scored = risk.rank(row)
-        row["score"] = round(scored, 3) if scored is not None else None
+        row["rank"] = round(scored, 3) if scored is not None else None
         if m["kind"] == "aec" and m["live"] and spr is not None and spr <= 0.02:
             live.append(row)
         elif m.get("soon") and m["kind"] == "aec":
@@ -172,7 +176,7 @@ def main():
             nxt.append(row)
         elif spr and spr > 0.015:
             reject.append(f"{s} wide {spr}")
-    live.sort(key=lambda r: (-(r.get("score") or -1), r.get("spr") or 9))
+    live.sort(key=lambda r: (-(r.get("rank") or -1), r.get("spr") or 9))
     soon_l.sort(key=lambda r: (r.get("minutes_to_start") or 99, r.get("spr") or 9))
     nxt.sort(key=lambda r: (r.get("start") or "", r.get("spr") or 9))
     lines = [
@@ -182,7 +186,7 @@ def main():
         "## LIVE",
     ]
     for r in live[:8]:
-        lines.append(f"- {r['kind']} {r['slug']} {r['lg']} {r['period']} score {r.get('score')} d {r.get('delta_c')}/{r.get('delta2_c')} bid {r['bid']} ask {r['ask']} spr {r['spr']} | {r['title']}")
+        lines.append(f"- {r['kind']} {r['slug']} {r['lg']} {r['period']} {r.get('score')} rank {r.get('rank')} d {r.get('last_delta_c')}/{r.get('last_delta2_c')} bid {r['bid']} last {r.get('last')} ask {r['ask']} | {r['title']}")
     lines += ["", f"## SOON ≤{SOON_MIN}m (ok to wait)"]
     for r in soon_l[:6]:
         lines.append(f"- {r['slug']} in {r.get('minutes_to_start')}m score {r.get('score')} bid {r['bid']} ask {r['ask']} spr {r['spr']} | {r['title']}")

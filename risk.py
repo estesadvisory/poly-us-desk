@@ -1,13 +1,12 @@
 #!/usr/bin/env python3
 """Venue-agnostic risk. Polymarket US is the first adapter, not the policy.
 
-Desk version v11 (see ~/.grok/desk/VERSION).
-Python loop is the only buyer (never sells). Python watch is the only seller.
-Dogs 18–42¢ only. No fav band (TCU/Idaho were a fee trap).
+Desk version v12 (see ~/.grok/desk/VERSION).
+Loop buys; watch sells. LIVE dogs 18–42¢ with two *prints* (last trade), a real score, bid on the print.
 """
 from __future__ import annotations
 
-VERSION = "v11"
+VERSION = "v12"
 RING_USD = 10.0
 CLIP_USD = 2.0
 MAX_USD = 2.0
@@ -68,16 +67,38 @@ def is_late(period) -> bool:
     return any(m in p for m in LATE_PERIOD) or "Q4" in pu or "4Q" in pu
 
 
+def score_ok(score, period) -> bool:
+    """US live events publish score. 0-0 in Q1/1st is not a cover; 0-0 in the 6th can be baseball."""
+    if not score or not isinstance(score, str) or "-" not in score.replace("–", "-"):
+        return False
+    try:
+        a, b = score.replace("–", "-").split("-", 1)
+        a, b = int(a.strip()), int(b.strip())
+    except Exception:
+        return False
+    if a == 0 and b == 0:
+        p = period or ""
+        if any(x in p for x in ("Q1", "1st", "NS", "1H", "Top 1st", "Bot 1st")):
+            return False
+    return True
+
+
 def rank(row: dict) -> float | None:
-    """None = do not buy. LIVE 2-way dogs 18–42¢, two upticks, fat book. Never favs, never SOON, never 3-way."""
+    """None = do not buy. LIVE dog 18–42¢, two last-trade upticks, score on the board, print at the bid."""
     slug = row.get("slug") or ""
     if not slug.startswith(TWO_WAY_PREFIX):
         return None
     if not bool(row.get("live")):
         return None
+    if not score_ok(row.get("score"), row.get("period")):
+        return None
     ask = float(row.get("ask") or 0)
+    bid = _f(row.get("bid"))
+    last = _f(row.get("last"))
     spr = row.get("spr")
     if spr is None or spr > MAX_SPREAD_LIVE:
+        return None
+    if last is None or bid is None or round(abs(last - bid), 4) > 0.01:
         return None
     oi = _f(row.get("oi"))
     if oi is not None and oi < MIN_OI:
@@ -85,8 +106,8 @@ def rank(row: dict) -> float | None:
     depth = _f(row.get("bid_depth"))
     if depth is not None and depth < MIN_BID_DEPTH:
         return None
-    delta = _f(row.get("delta_c"))
-    delta2 = _f(row.get("delta2_c"))
+    delta = _f(row.get("last_delta_c"))
+    delta2 = _f(row.get("last_delta2_c"))
     if delta is None or delta2 is None:
         return None
     if delta2 < MIN_DELTA2:

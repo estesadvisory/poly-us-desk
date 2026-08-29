@@ -226,8 +226,11 @@ def _cut(e, slug):
     avg = px(p.get("costPerShare"))
     if not avg and qty:
         avg = px(p.get("cost")) / qty
-    bid = px(bbo(slug).get("bestBid"))
-    limit = round(max(bid - 0.02, 0.01), 4)
+    md = bbo(slug)
+    bid, ask = px(md.get("bestBid")), px(md.get("bestAsk"))
+    spr = round(ask - bid, 4) if ask and bid else 0.02
+    # Tight book: take the bid. Wide: cross. Watch retries on miss.
+    limit = round(bid if spr <= 0.01 else max(bid - 0.02, 0.01), 4)
     order = {
         "marketSlug": slug,
         "intent": "ORDER_INTENT_SELL_LONG",

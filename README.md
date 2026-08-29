@@ -1,4 +1,4 @@
-# poly-us-desk (v11)
+# poly-us-desk (v12)
 
 Polymarket **US** micro desk. Private. **No secrets in this repo.**
 
@@ -12,4 +12,4 @@ Runtime copy: `~/.grok/desk`. Secrets: 1Password EstesDevOps login `polymarket-u
 
 Start card: [`GO.md`](./GO.md)
 
-Policy: LIVE 2-way dogs 18–42¢, two upticks. No favorites. `$10` never trades.
+Policy: LIVE 2-way dogs 18–42¢, two last-trade prints + live score. No favorites. `$10` never trades.
