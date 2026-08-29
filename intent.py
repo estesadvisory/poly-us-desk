@@ -141,7 +141,7 @@ def main():
             "slug": row["slug"],
             "usd": TICKET,
             "ask": row.get("ask"),
-            "score": round(sc, 3),
+            "rank": round(sc, 3),
             "live": row.get("live"),
             "soon": row.get("soon"),
             "minutes_to_start": row.get("minutes_to_start"),

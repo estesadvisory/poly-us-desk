@@ -228,7 +228,7 @@ def _cut(e, slug):
         avg = px(p.get("cost")) / qty
     md = bbo(slug)
     bid, ask = px(md.get("bestBid")), px(md.get("bestAsk"))
-    spr = (ask - bid) if ask and bid else 0.02
+    spr = round(ask - bid, 4) if ask and bid else 0.02
     # Tight book: take the bid. Wide: cross. Watch retries on miss.
     limit = round(bid if spr <= 0.01 else max(bid - 0.02, 0.01), 4)
     order = {

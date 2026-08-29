@@ -98,7 +98,7 @@ def rank(row: dict) -> float | None:
     spr = row.get("spr")
     if spr is None or spr > MAX_SPREAD_LIVE:
         return None
-    if last is None or bid is None or abs(last - bid) > 0.01:
+    if last is None or bid is None or round(abs(last - bid), 4) > 0.01:
         return None
     oi = _f(row.get("oi"))
     if oi is not None and oi < MIN_OI:
