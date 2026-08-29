@@ -163,7 +163,7 @@ def main():
         dump(
             {
                 "action": "HOLD",
-                "reason": f"open={len(opens)}/{MAX_OPEN} no second live 18-42",
+                "reason": f"open={len(opens)}/{MAX_OPEN} no live 2-way book",
                 "working": working,
                 "open": [o.get("slug") for o in opens],
                 "live_n": len(tape.get("live") or []),

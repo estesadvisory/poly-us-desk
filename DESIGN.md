@@ -1,6 +1,6 @@
 # Desk v13 — architecture
 
-**Live version: v14.** Start from a fresh TUI pasting `GO.md`.
+**Live version: v15.** Start from a fresh TUI pasting `GO.md`.
 
 ## What broke
 
@@ -30,4 +30,4 @@ Universe scan is cheap enough; the hot path is what catches the +2¢ bid tick.
 
 ## Policy (v13)
 
-LIVE `aec-` **18–42¢**, book ≤2¢, **not dumping** (bid tick > −0.5¢). No +2¢-in-8s requirement. Baseball Top 1st 0–0 is live; football Q1 0–0 is not. No 3-way, no 43–57, no $10. Clip $2 × max 2. Stop −3¢. Trail +5¢. Session −$2 from this GO.
+Mike’s rules: all US sports, two $2 tickets, reap (+5¢ trail), cut (−3¢), fast micros. `$10` ring. LIVE `aec-` with a 12–88¢ book (exit-able). No 18–42, no momentum tick, no 0–0 religion.

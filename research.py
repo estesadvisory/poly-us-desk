@@ -224,7 +224,7 @@ def main():
             continue
         scored = risk.rank(row)
         row["rank"] = round(scored, 3) if scored is not None else None
-        if m["kind"] == "aec" and m["live"] and spr is not None and spr <= 0.02:
+        if m["kind"] == "aec" and m["live"] and spr is not None and spr <= risk.MAX_SPREAD_LIVE:
             live.append(row)
         elif m.get("soon") and m["kind"] == "aec":
             soon_l.append(row)
@@ -332,7 +332,7 @@ def hot():
         row = {**m, **q}
         scored = risk.rank(row)
         row["rank"] = round(scored, 3) if scored is not None else None
-        if m.get("live") and spr is not None and spr <= 0.02:
+        if m.get("live") and spr is not None and spr <= risk.MAX_SPREAD_LIVE:
             live.append(row)
         elif m.get("soon"):
             soon_l.append(row)
