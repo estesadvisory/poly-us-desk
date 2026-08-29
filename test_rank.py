@@ -20,11 +20,15 @@ def row(**kw):
 
 
 def main():
-    assert risk.VERSION == "v16"
-    assert risk.MAX_OPEN == 2
+    assert risk.VERSION == "v17"
+    assert risk.MAX_OPEN >= 10
     assert risk.RING_USD == 10.0
     assert risk.rank(row()) is not None, "flat first-ish print must fire"
     assert risk.rank(row(delta_c=None)) is not None, "no history still fires"
+    soon = row(live=False, soon=True, minutes_to_start=10, ask=0.53, bid=0.52)
+    assert risk.rank(soon) is not None, "SOON 12-88 must fire"
+    later = row(live=False, soon=False, minutes_to_start=80)
+    assert risk.rank(later) is None, "LATER must not buy"
     assert risk.rank(row(ask=0.37, bid=0.365, delta_c=1.0)) is not None, "37c uptick"
     assert risk.rank(row(ask=0.85, bid=0.84, spr=0.01)) is not None, "85c still tradable"
     assert risk.rank(row(slug="atc-epl-tot-new-tot")) is None, "3-way"

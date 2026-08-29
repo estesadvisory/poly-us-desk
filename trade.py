@@ -171,11 +171,11 @@ def _buy(e, slug, usd):
         return
     try:
         tape = json.loads(TAPE.read_text())
-        live_rows = {r.get("slug"): r for r in (tape.get("live") or [])}
-        if slug not in live_rows:
-            print(json.dumps({"ok": False, "stage": "not_live", "slug": slug}))
+        rows = {r.get("slug"): r for r in list(tape.get("live") or []) + list(tape.get("soon") or [])}
+        if slug not in rows:
+            print(json.dumps({"ok": False, "stage": "not_actionable", "slug": slug}))
             return
-        row = dict(live_rows.get(slug) or {})
+        row = dict(rows.get(slug) or {})
         if risk.rank(row) is None:
             print(json.dumps({"ok": False, "stage": "rank_reject", "slug": slug}))
             return

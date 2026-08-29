@@ -57,7 +57,8 @@ def refresh_tape():
 
 def pick_buy(tape, ban, open_slugs):
     scored = []
-    for r in list(tape.get("live") or []):
+    rows = list(tape.get("live") or []) + list(tape.get("soon") or [])
+    for r in rows:
         s = r.get("slug") or ""
         if not s or s in ban or s in open_slugs:
             continue
@@ -176,7 +177,7 @@ def main():
         dump(
             {
                 "action": "HOLD",
-                "reason": f"open={len(opens)}/{MAX_OPEN} no live 2-way book",
+                "reason": f"open={len(opens)}/{MAX_OPEN} no live/soon 2-way book",
                 "working": working,
                 "open": [o.get("slug") for o in opens],
                 "live_n": len(tape.get("live") or []),

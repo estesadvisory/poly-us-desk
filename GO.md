@@ -7,7 +7,7 @@ You are sitting at a shell. Python trades. You type commands.
 ```bash
 cd ~/repos/poly-us-desk
 test -f ~/.grok/secrets/polymarket-us.env || { echo "NO ENV"; exit 1; }
-test "$(cat VERSION)" = "v16" || { echo "VERSION mismatch"; cat VERSION; exit 1; }
+test "$(cat VERSION)" = "v17" || { echo "VERSION mismatch"; cat VERSION; exit 1; }
 python3 desk.py
 ```
 

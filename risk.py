@@ -8,11 +8,12 @@ games still trade. Rank prefers a tight book and a lower taker fee — not the
 """
 from __future__ import annotations
 
-VERSION = "v16"
+VERSION = "v17"
 RING_USD = 10.0
 CLIP_USD = 2.0
 MAX_USD = 2.0
-MAX_OPEN = 2
+# Working cash is the real cap ($2 clips). Do not sit on idle BP.
+MAX_OPEN = 20
 SOON_MIN = 20
 # Tradable two-way: dust (<12¢) and locks (>88¢) cannot be micro-reaped.
 ASK_TRADE = (0.12, 0.88)
@@ -66,12 +67,21 @@ def in_dog_band(ask: float) -> bool:
     return lo <= float(ask or 0) <= hi
 
 
+def is_actionable(row: dict) -> bool:
+    """LIVE, or SOON (kickoff within SOON_MIN). LATER is cash-wait."""
+    if bool(row.get("live")):
+        return True
+    if bool(row.get("soon")):
+        return True
+    return bucket(False, row.get("minutes_to_start")) == "SOON"
+
+
 def rank(row: dict) -> float | None:
-    """LIVE aec- with an exit-able book. Reject dumps and bounce-backs."""
+    """LIVE or SOON aec- with an exit-able book. Reject dumps and bounce-backs."""
     slug = row.get("slug") or ""
     if not slug.startswith(TWO_WAY_PREFIX):
         return None
-    if not bool(row.get("live")):
+    if not is_actionable(row):
         return None
     ask = float(row.get("ask") or 0)
     bid = _f(row.get("bid"))
@@ -92,7 +102,8 @@ def rank(row: dict) -> float | None:
         return None
     fee = taker_fee_per_share(ask)
     tick = 0.0 if delta is None else max(delta, 0.0)
-    return 100.0 - spr * 200.0 - fee * 800.0 + min(tick, 3.0) * 2.0
+    live_bonus = 5.0 if bool(row.get("live")) else 0.0
+    return 100.0 - spr * 200.0 - fee * 800.0 + min(tick, 3.0) * 2.0 + live_bonus
 
 
 def watch_exit(avg: float, bid: float, peak: float, live: bool) -> str | None:
