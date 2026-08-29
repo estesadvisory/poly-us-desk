@@ -135,14 +135,18 @@ def main():
             period = (e.get("period") or "").strip()
             ended = e.get("ended") is True
             api_live = e.get("live")
-            if api_live is True:
-                live_g = not ended
+            mins = (ts - now).total_seconds() / 60.0
+            if ended:
+                live_g = False
+            elif api_live is True:
+                live_g = True
+            elif mins < 0 and mins > -risk.OVERDUE_LIVE_MIN:
+                # API still NS/false after posted start (CHI-TEN hole). Treat live.
+                live_g = True
             elif api_live is False:
                 live_g = False
             else:
-                live_g = (not ended) and period not in ("", "NS")
-            mins = (ts - now).total_seconds() / 60.0
-            # Overdue NS (posted start passed, still not in play) is still a queue for ≤20m.
+                live_g = period not in ("", "NS")
             soon_g = (not live_g) and (-SOON_MIN <= mins <= SOON_MIN)
             horizon = live_g or soon_g or (0 < mins <= 90)
             if not horizon:
@@ -226,7 +230,7 @@ def main():
             continue
         scored = risk.rank(row)
         row["rank"] = round(scored, 3) if scored is not None else None
-        if m["kind"] == "aec" and m["live"] and spr is not None and spr <= risk.MAX_SPREAD_LIVE:
+        if m["kind"] == "aec" and m["live"]:
             live.append(row)
         elif m.get("soon") and m["kind"] == "aec":
             soon_l.append(row)
@@ -335,7 +339,7 @@ def hot():
         row = {**m, **q}
         scored = risk.rank(row)
         row["rank"] = round(scored, 3) if scored is not None else None
-        if m.get("live") and spr is not None and spr <= risk.MAX_SPREAD_LIVE:
+        if m.get("live"):
             live.append(row)
         elif m.get("soon"):
             soon_l.append(row)

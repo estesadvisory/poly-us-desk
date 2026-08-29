@@ -87,7 +87,13 @@ def skip_add(slug):
 
 def books(e):
     st, bal = signed("GET", "/v1/account/balances", e)
+    if st != 200:
+        print(json.dumps({"ok": False, "stage": "books", "http": st}))
+        return None
     b = (bal.get("balances") or [{}])[0] if isinstance(bal, dict) else {}
+    if b.get("buyingPower") is None:
+        print(json.dumps({"ok": False, "stage": "books", "reason": "no_buyingPower"}))
+        return None
     bp = float(b.get("buyingPower") or 0)
     st, pos = signed("GET", "/v1/portfolio/positions", e)
     positions = (pos or {}).get("positions") or {}

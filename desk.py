@@ -166,7 +166,18 @@ def research_loop() -> None:
     import lock as desklock
 
     desklock.claim("research")
-    print(json.dumps({"ok": True, "role": "research", "version": risk.VERSION, "pid": os.getpid()}), flush=True)
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "role": "research",
+                "version": risk.VERSION,
+                "rev": paths.code_rev(),
+                "pid": os.getpid(),
+            }
+        ),
+        flush=True,
+    )
     while True:
         tape = paths.DESK / "tape.json"
         age = 1e9
@@ -206,13 +217,22 @@ def hud() -> str:
     work = books.get("working")
     opens = books.get("open") or []
     live_n = len(tape.get("live") or [])
+    soon_n = len(tape.get("soon") or [])
+    later_n = len(tape.get("later") or [])
     action = intent.get("action") or "?"
-    reason = (intent.get("reason") or "")[:80]
+    reason = (intent.get("reason") or "")[:100]
+    nxt = intent.get("next")
+    nxt_m = intent.get("next_min")
+    why = intent.get("why") or []
     lines = [
-        f"{risk.VERSION}  {now_iso()}  {'HOLD' if held() else 'BUYING'}  paper={paths.PAPER}",
-        f"BP {bp}  work {work}  ring {risk.RING_USD}  open {len(opens)}/{risk.MAX_OPEN}  live {live_n}",
+        f"{risk.VERSION}  {paths.code_rev()}  {now_iso()}  {'HOLD' if held() else 'BUYING'}  paper={paths.PAPER}  max_open={risk.MAX_OPEN}",
+        f"BP {bp}  work {work}  ring {risk.RING_USD}  open {len(opens)}/{risk.MAX_OPEN}  live {live_n} soon {soon_n} later {later_n}",
         f"last {action}  {reason}",
     ]
+    if nxt:
+        lines.append(f"next {nxt} in {nxt_m}m")
+    if why:
+        lines.append("why " + "; ".join(str(x) for x in why[:4]))
     for o in opens:
         lines.append(
             f"  {o.get('slug')} qty {o.get('qty')} avg {o.get('avg')} bid {o.get('bid')} d {o.get('delta_c')}"
@@ -287,7 +307,17 @@ class Supervisor:
         except Exception:
             pass
         (paths.DESK / "supervisor.pid").write_text(str(os.getpid()) + "\n")
-        event("supervisor", "boot", version=risk.VERSION, paper=self.paper, no_buy=self.no_buy, hold=held())
+        event(
+            "supervisor",
+            "boot",
+            version=risk.VERSION,
+            rev=paths.code_rev(),
+            max_open=risk.MAX_OPEN,
+            soon_min=risk.SOON_MIN,
+            paper=self.paper,
+            no_buy=self.no_buy,
+            hold=held(),
+        )
         for ch in self.children.values():
             ch.start()
 
@@ -318,7 +348,7 @@ class Supervisor:
         self._build_children()
         for ch in self.children.values():
             ch.start()
-        event("supervisor", "reload")
+        event("supervisor", "reload", version=risk.VERSION, rev=paths.code_rev(), max_open=risk.MAX_OPEN)
         # session.json kept — same GO, same −$2 circuit
 
     def handle(self, parsed) -> bool:

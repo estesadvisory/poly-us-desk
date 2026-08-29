@@ -46,7 +46,19 @@ def main():
     desklock.claim("loop")
     # session.json is the −$2 circuit. Supervisor wipes it on a fresh desk.py
     # boot only — reload must not reset the day.
-    print(json.dumps({"ok": True, "role": "loop", "version": risk.VERSION, "pid": os.getpid()}), flush=True)
+    print(
+        json.dumps(
+            {
+                "ok": True,
+                "role": "loop",
+                "version": risk.VERSION,
+                "rev": paths.code_rev(),
+                "max_open": risk.MAX_OPEN,
+                "pid": os.getpid(),
+            }
+        ),
+        flush=True,
+    )
     while True:
         out, err = "", ""
         try:
@@ -72,9 +84,10 @@ def main():
             print(err[-200], flush=True)
         try:
             (DESK / "STATUS.md").write_text(
-                f"# desk {risk.VERSION}\n\n"
+                f"# desk {risk.VERSION} {paths.code_rev()}\n\n"
                 f"updated: {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}\n"
                 f"loop_pid: {os.getpid()}\n"
+                f"max_open: {risk.MAX_OPEN}\n"
                 f"action: {action_line or 'none'}\n"
                 f"ledger: {ledger_line or 'none'}\n"
             )
@@ -85,7 +98,8 @@ def main():
         if TAPE.exists():
             try:
                 t = json.loads(TAPE.read_text())
-                hot = live_dogs(t) or any(risk.rank(r) is not None for r in (t.get("live") or []))
+                rows = list(t.get("live") or []) + list(t.get("soon") or [])
+                hot = live_dogs(t) or any(risk.rank(r) is not None for r in rows)
             except Exception:
                 pass
         time.sleep(risk.OPEN_SCAN_SEC if (n or hot) else risk.IDLE_SCAN_SEC)

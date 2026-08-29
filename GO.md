@@ -25,7 +25,7 @@ Do **not** `nohup` `loop.py` / `watch.py` by hand. Do **not** run `hum.py` / `in
 
 | Type | Effect |
 |------|--------|
-| `status` | BP, working, open tickets, child pids |
+| `status` | version, git SHA, BP, working, open, live/soon/later, why |
 | `hold` | pause new buys (seller stays up) |
 | `go` | resume buys |
 | `reload` | restart children after you edit this repo |
@@ -53,8 +53,8 @@ Do not edit a running child and expect it to pick up changes without `reload` / 
 ## Book / policy
 
 - `books.json` — `open: []` means flat
-- `$10` never trades. Clip $2, max 2. Working = BP − 10.
-- LIVE `aec-` only, all US sports, 12–88¢ book, not dumping.
+- `$10` never trades. Clip $2. Working = BP − 10 (ticket cap, not a 2-slot freeze).
+- LIVE or SOON (≤45m) `aec-`, all US sports, 12–88¢ book, not dumping. Overdue NS stays live 90m.
 - Stop −3¢. Trail +5¢. No scratch sells. No 3-ways.
 
 US only. Never print secrets.
