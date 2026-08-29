@@ -13,9 +13,10 @@ CT = ZoneInfo("America/Chicago")
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import paths
 import trade
 
-DESK = Path.home() / ".grok/desk"
+DESK = paths.DESK
 FILLS = DESK / "fills.json"
 LEDGER = DESK / "ledger.md"
 BOOKS = DESK / "books.json"

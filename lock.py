@@ -4,7 +4,10 @@ from __future__ import annotations
 import atexit, fcntl, os, sys
 from pathlib import Path
 
-DESK = Path.home() / ".grok/desk"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import paths
+
+DESK = paths.DESK
 ORDERS = DESK / "orders.lock"
 
 

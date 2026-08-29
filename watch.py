@@ -8,13 +8,14 @@ from cryptography.hazmat.primitives.asymmetric import ed25519
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lock as desklock
+import paths
 import risk
 
 PUB = "https://gateway.polymarket.us"
 API = "https://api.polymarket.us"
-ENVP = Path.home() / ".grok/secrets/polymarket-us.env"
-TAPE = Path.home() / ".grok/desk/tape.json"
-PEAKF = Path.home() / ".grok/desk/peak.json"
+ENVP = paths.ENVP
+TAPE = paths.DESK / "tape.json"
+PEAKF = paths.DESK / "peak.json"
 
 
 def env():
@@ -62,7 +63,7 @@ def px(x):
 def cut_now(slug):
     import subprocess
 
-    trade = Path.home() / ".grok/desk/trade.py"
+    trade = paths.REPO / "trade.py"
     r = subprocess.run(["python3", str(trade), "cut", slug], capture_output=True, text=True, timeout=45)
     line = (r.stdout or r.stderr or "").strip().splitlines()
     last = line[-1] if line else ""

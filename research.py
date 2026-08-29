@@ -9,6 +9,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import paths
 import risk
 
 PUB = "https://gateway.polymarket.us"
@@ -19,10 +20,10 @@ BBO_CAP = 100
 LIVE_KEEP = 24
 SOON_KEEP = 12
 SOON_MIN = risk.SOON_MIN  # capital may sit this long; not 90
-SKIP = Path.home() / ".grok/desk/skip_slugs.txt"
-OUT = Path.home() / ".grok/desk/tape.md"
-OUTJ = Path.home() / ".grok/desk/tape.json"
-QUOTES = Path.home() / ".grok/desk/quotes.json"
+SKIP = paths.DESK / "skip_slugs.txt"
+OUT = paths.DESK / "tape.md"
+OUTJ = paths.DESK / "tape.json"
+QUOTES = paths.DESK / "quotes.json"
 UA = {"User-Agent": "estes-desk/research"}
 
 
@@ -112,6 +113,7 @@ def picks(markets):
 
 
 def main():
+    paths.ensure_desk()
     now = datetime.now(timezone.utc)
     ban = skips()
     live, soon_l, nxt, reject = [], [], [], []
@@ -274,6 +276,7 @@ def main():
 
 def hot():
     """Re-BBO slugs already on tape. No league crawl."""
+    paths.ensure_desk()
     now = datetime.now(timezone.utc)
     if not OUTJ.exists():
         return main()

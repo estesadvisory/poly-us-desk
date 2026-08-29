@@ -1,4 +1,4 @@
-# Venue lessons 2026-08-28 → 08-29 — live policy **v13**
+# Venue lessons 2026-08-28 → 08-29 — live policy **v16**
 
 Source: `GET /v1/portfolio/activities` (cost already includes taker fee). Not Chrome cash, not memory.
 
@@ -36,7 +36,7 @@ Winners are **live names that already moved a dime**, not 1¢ scalps. AZ 5.7¢ i
 
 US sports `feeCoefficient` 0.06. Taker fee/share ≈ `0.06 × p × (1−p)` ≈ **1.5¢/side at 50¢**, ~3¢ round-trip. A +1¢ / −1¢ scalp on a $2–$5 clip cannot have positive EV. Stop −1¢ and reap +2¢ were both inside the fee.
 
-Live policy is **v13**. Below is how we got there (superseded).
+Live policy is **v16** (`desk.py` in Terminal). Below is how we got there (superseded).
 
 ## v7 (superseded)
 

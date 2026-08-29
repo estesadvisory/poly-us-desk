@@ -17,3 +17,6 @@ skip_slugs.txt
 .env
 *.env
 secrets/
+logs/
+HOLD
+supervisor.pid

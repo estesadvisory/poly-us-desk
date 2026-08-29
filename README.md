@@ -1,15 +1,34 @@
-# poly-us-desk (v13)
+# poly-us-desk (v16)
 
 Polymarket **US** micro desk. Private. **No secrets in this repo.**
 
-Runtime copy: `~/.grok/desk`. Secrets: 1Password EstesDevOps login `polymarket-us` → `~/.grok/secrets/polymarket-us.env` (never commit).
+Code: this git repo. State + logs: `~/.grok/desk` (override with `POLY_DESK`).
+Secrets: 1Password EstesDevOps login `polymarket-us` → `~/.grok/secrets/polymarket-us.env`.
+
+## Run (one Terminal)
+
+```bash
+cd ~/repos/poly-us-desk
+test -f ~/.grok/secrets/polymarket-us.env || { echo "NO ENV"; exit 1; }
+python3 desk.py          # research + seller; buys HOLD until you type go
+```
+
+Commands in that same terminal: `help` `status` `hold` `go` `reload` `skip <slug>` `books` `quit`
+
+- `--go` — arm buys on start
+- `--no-buy` — seller + research only (leftover tickets)
+- `--paper` — no live orders
+
+Iteration: `hold` → edit this repo → `reload` (or `quit` and run again).
+
+Logs for later check-in: `~/.grok/desk/logs/` (`desk.log`, `events.jsonl`, `research.log`, `loop.log`, `watch.log`).
 
 ## Roles
 
+- `desk.py` — supervisor / HUD / commands (no LLM)
+- `research.py` — tape
 - `loop.py` — only **buyer**
 - `watch.py` — only **seller**
-- One CoS TUI — talks; does not place orders
 
-Start card: [`GO.md`](./GO.md)
-
-Policy: LIVE 2-way dogs 18–42¢, **+2¢ bid tick** (v11 fire path). No 3-way, no 43–57, no 0–0 Q1. `$10` never trades.
+`$10` never trades. Clip $2, max 2. LIVE `aec-` 2-way, all operational US leagues.
+Entry: not dumping. Exit: stop −3¢, trail +5¢. No 3-ways.

@@ -10,10 +10,11 @@ from subprocess import TimeoutExpired
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lock as desklock
+import paths
 import risk
 
-DESK = Path.home() / ".grok/desk"
-HUM = DESK / "hum.py"
+DESK = paths.DESK
+HUM = paths.REPO / "hum.py"
 TAPE = DESK / "tape.json"
 
 
