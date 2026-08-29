@@ -125,6 +125,7 @@ def main():
                     "minutes_to_start": round(mins, 1),
                     "kind": kind,
                     "elapsed": e.get("elapsed"),
+                    "score": e.get("score"),
                 }
     slugs = list(dict.fromkeys(slugs))[:40]
     prev = {}
@@ -143,20 +144,23 @@ def main():
         m = meta[s]
         ask, bid, spr = q.get("ask") or 0, q.get("bid") or 0, q.get("spr")
         old = prev.get(s) or {}
-        hist = [x for x in (old.get("bids") or []) if x]
-        if old.get("bid") and (not hist or hist[-1] != old.get("bid")):
-            hist.append(old["bid"])
+        last = q.get("last") or 0
+        hist = [x for x in (old.get("lasts") or []) if x]
+        if old.get("last") and (not hist or hist[-1] != old.get("last")):
+            hist.append(old["last"])
         hist = hist[-3:]
-        delta_c = round((bid - hist[-1]) * 100, 2) if hist else None
-        delta2_c = round((hist[-1] - hist[-2]) * 100, 2) if len(hist) >= 2 else None
-        q["delta_c"] = delta_c
-        q["delta2_c"] = delta2_c
-        q["prev_bid"] = hist[-1] if hist else None
+        last_delta_c = round((last - hist[-1]) * 100, 2) if hist and last else None
+        last_delta2_c = round((hist[-1] - hist[-2]) * 100, 2) if len(hist) >= 2 else None
+        q["last_delta_c"] = last_delta_c
+        q["last_delta2_c"] = last_delta2_c
+        q["delta_c"] = last_delta_c
+        q["delta2_c"] = last_delta2_c
         now_q[s] = {
             "bid": bid,
             "ask": ask,
+            "last": last,
             "ts": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "bids": (hist + [bid])[-3:],
+            "lasts": (hist + [last])[-3:] if last else hist,
         }
         row = {**m, **q}
         if m["kind"] != "aec":

@@ -1,6 +1,6 @@
-# Desk v11 — architecture
+# Desk v12 — architecture
 
-**Live version: v11.** Start only from a fresh TUI pasting `GO.md`.
+**Live version: v12.** Start only from a fresh TUI pasting `GO.md`.
 
 ## Roles
 
@@ -15,7 +15,7 @@ Intent/hum never CUT. Watch owns stop, trail, and LATER TTR.
 
 ## Policy
 
-LIVE 2-way dogs **18–42¢**, two upticks, OI ≥ 5k, depth ≥ 5. No fav band (TCU net red; Idaho +$0.06 after fees). No 43–57¢, no 3-way, no pregame. Stop −3¢. Trail +5¢ / give 3¢ from peak every 4s. Session halt $2 from GO BP. $10 never trades. $2 × max 2.
+LIVE 2-way dogs **18–42¢**, two **last-trade** upticks, score on the board (no 0–0 in Q1), last print within 1¢ of bid, OI ≥ 5k, depth ≥ 5. No favs. Stop −3¢. Trail +5¢. Cut at bid when the book is 1¢ wide. Session halt $2 from GO equity. $10 never trades. $2 × max 2.
 
 HOLD on an empty qualified tape is success.
 
