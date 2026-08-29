@@ -92,6 +92,22 @@ def fetch_league(lg):
         return lg, [], type(ex).__name__
 
 
+def event_flags(ended: bool, api_live, mins: float, period: str) -> tuple[bool, bool]:
+    """(live, soon). Ended never buys. Overdue NS stays live for OVERDUE_LIVE_MIN."""
+    if ended:
+        return False, False
+    if api_live is True:
+        live_g = True
+    elif mins < 0 and mins > -risk.OVERDUE_LIVE_MIN:
+        live_g = True
+    elif api_live is False:
+        live_g = False
+    else:
+        live_g = (period or "").strip() not in ("", "NS")
+    soon_g = (not live_g) and (-SOON_MIN <= mins <= SOON_MIN)
+    return live_g, soon_g
+
+
 def picks(markets):
     out = []
     for m in markets or []:
@@ -136,18 +152,7 @@ def main():
             ended = e.get("ended") is True
             api_live = e.get("live")
             mins = (ts - now).total_seconds() / 60.0
-            if ended:
-                live_g = False
-            elif api_live is True:
-                live_g = True
-            elif mins < 0 and mins > -risk.OVERDUE_LIVE_MIN:
-                # API still NS/false after posted start (CHI-TEN hole). Treat live.
-                live_g = True
-            elif api_live is False:
-                live_g = False
-            else:
-                live_g = period not in ("", "NS")
-            soon_g = (not live_g) and (-SOON_MIN <= mins <= SOON_MIN)
+            live_g, soon_g = event_flags(ended, api_live, mins, period)
             horizon = live_g or soon_g or (0 < mins <= 90)
             if not horizon:
                 continue

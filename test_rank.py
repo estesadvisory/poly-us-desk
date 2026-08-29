@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """v16 rank. python3 test_rank.py"""
 from __future__ import annotations
+import research
 import risk
 
 
@@ -38,6 +39,10 @@ def main():
     assert risk.why_not(row(delta_c=-1.0)) == "dump"
     overdue = row(live=True, soon=False, minutes_to_start=-36, ask=0.41, bid=0.40)
     assert risk.rank(overdue) is not None, "overdue NS treated live must fire"
+    assert research.event_flags(True, False, 10, "NS") == (False, False)
+    assert research.event_flags(True, False, -10, "NS") == (False, False)
+    assert research.event_flags(False, False, 30, "NS") == (False, True)
+    assert research.event_flags(False, False, -36, "NS") == (True, False)
     assert risk.rank(row(ask=0.37, bid=0.365, delta_c=1.0)) is not None, "37c uptick"
     assert risk.rank(row(ask=0.85, bid=0.84, spr=0.01)) is not None, "85c still tradable"
     assert risk.rank(row(slug="atc-epl-tot-new-tot")) is None, "3-way"
