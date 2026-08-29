@@ -1,4 +1,4 @@
-# poly-us-desk (v17)
+# poly-us-desk (v18)
 
 Polymarket **US** micro desk. Private. **No secrets in this repo.**
 
