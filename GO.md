@@ -7,14 +7,15 @@ You are sitting at a shell. Python trades. You type commands.
 ```bash
 cd ~/repos/poly-us-desk
 test -f ~/.grok/secrets/polymarket-us.env || { echo "NO ENV"; exit 1; }
-test "$(cat VERSION)" = "v18" || { echo "VERSION mismatch"; cat VERSION; exit 1; }
-python3 desk.py
+test "$(cat VERSION)" = "v19" || { echo "VERSION mismatch"; cat VERSION; exit 1; }
+python3 desk.py --go
 ```
 
-Default: **research + seller up, buys HOLD**. Type `go` when you want new $2 tickets.
+After a version bump: **`quit` → `git pull` → `python3 desk.py --go`**. Do not restart on HOLD and walk away. Cold start without `--go` still pauses buys until you type `go`.
 
 ```bash
-python3 desk.py --go          # arm buys immediately
+python3 desk.py --go          # research + seller + buys armed
+python3 desk.py               # buys HOLD until you type go
 python3 desk.py --no-buy      # leftover / watch-only
 python3 desk.py --paper       # no live orders
 ```
@@ -54,7 +55,7 @@ Do not edit a running child and expect it to pick up changes without `reload` / 
 
 - `books.json` — `open: []` means flat
 - `$10` never trades. Clip $2. Working = BP − 10 (ticket cap, not a 2-slot freeze).
-- LIVE or SOON (≤45m) `aec-`, all US sports, 12–88¢ book, not dumping. Overdue NS stays live 90m.
+- LIVE or ticking SOON (≤45m) `aec-`, all US sports, 12–88¢ book, not dumping. Overdue NS stays live 90m. SOON needs a bid uptick; LIVE first print is ok.
 - Stop −3¢. Trail +5¢, give back 3¢, never sell a winner at/under entry. No scratch. No 3-ways.
 
 US only. Never print secrets.
