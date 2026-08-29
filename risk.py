@@ -1,34 +1,36 @@
 #!/usr/bin/env python3
 """Venue-agnostic risk. Polymarket US is the first adapter, not the policy.
 
-Desk version v12 (see ~/.grok/desk/VERSION).
-Loop buys; watch sells. LIVE dogs 18–42¢ with two *prints* (last trade), a real score, bid on the print.
+Desk version v13 (see ~/.grok/desk/VERSION).
+Loop buys; watch sells. LIVE dogs 18–42¢ on a +2¢ *bid* tick (v11 fire path).
+Last-trade is optional confirmation. No 3-way, no 43–57, no 0–0 Q1.
 """
 from __future__ import annotations
 
-VERSION = "v12"
+VERSION = "v13"
 RING_USD = 10.0
 CLIP_USD = 2.0
 MAX_USD = 2.0
 MAX_OPEN = 2
-SOON_MIN = 20  # TTR for leftovers only; we do not buy SOON
+SOON_MIN = 20
 ASK_DOG = (0.18, 0.42)
-MAX_SPREAD_LIVE = 0.01
+MAX_SPREAD_LIVE = 0.02
 HARD_STOP = 0.03
 TRAIL_ARM = 0.05
 TRAIL_GIVEBACK = 0.03
-IDLE_SCAN_SEC = 30
+IDLE_SCAN_SEC = 20
 OPEN_SCAN_SEC = 8
 TAPE_STALE_SEC = 90
+HOT_MAX_AGE_SEC = 25
 TWO_WAY_PREFIX = "aec-"
 BAN_PREFIX = "atc-"
 FEE_COEF = 0.06
 MIN_DELTA_DOG = 2.0
-MIN_DELTA2 = 1.0  # prior tick also up — two prints, not one bounce
-MAX_CHASE_CENTS = 8.0  # last 30s already ran; we are late
+BOUNCE_DUMP = -2.0  # prior bid tick this red → bounce, skip
+MAX_CHASE_CENTS = 8.0
 MIN_OI = 5000.0
-MIN_BID_DEPTH = 5
-BUY_COOLDOWN_SEC = 900  # after a *losing* cut only
+MIN_BID_DEPTH = 3
+BUY_COOLDOWN_SEC = 900
 MAX_DAY_LOSS = 2.0
 LATE_PERIOD = ("5th", "6th", "7th", "8th", "9th", "Q4", "4Q", "2H")
 
@@ -68,23 +70,28 @@ def is_late(period) -> bool:
 
 
 def score_ok(score, period) -> bool:
-    """US live events publish score. 0-0 in Q1/1st is not a cover; 0-0 in the 6th can be baseball."""
+    """Ban 0-0 in Q1/1st. Missing score is OK if period is already in play (not Q1/NS)."""
+    p = period or ""
+    early = any(x in p for x in ("Q1", "1st", "NS", "1H", "Top 1st", "Bot 1st"))
     if not score or not isinstance(score, str) or "-" not in score.replace("–", "-"):
-        return False
+        return not early
     try:
         a, b = score.replace("–", "-").split("-", 1)
         a, b = int(a.strip()), int(b.strip())
     except Exception:
+        return not early
+    if a == 0 and b == 0 and early:
         return False
-    if a == 0 and b == 0:
-        p = period or ""
-        if any(x in p for x in ("Q1", "1st", "NS", "1H", "Top 1st", "Bot 1st")):
-            return False
     return True
 
 
+def in_dog_band(ask: float) -> bool:
+    lo, hi = ASK_DOG
+    return lo <= float(ask or 0) <= hi
+
+
 def rank(row: dict) -> float | None:
-    """None = do not buy. LIVE dog 18–42¢, two last-trade upticks, score on the board, print at the bid."""
+    """None = do not buy. LIVE aec- dog 18–42¢, +2¢ bid tick, not a bounce, book ≤2¢."""
     slug = row.get("slug") or ""
     if not slug.startswith(TWO_WAY_PREFIX):
         return None
@@ -93,12 +100,8 @@ def rank(row: dict) -> float | None:
     if not score_ok(row.get("score"), row.get("period")):
         return None
     ask = float(row.get("ask") or 0)
-    bid = _f(row.get("bid"))
-    last = _f(row.get("last"))
     spr = row.get("spr")
     if spr is None or spr > MAX_SPREAD_LIVE:
-        return None
-    if last is None or bid is None or round(abs(last - bid), 4) > 0.01:
         return None
     oi = _f(row.get("oi"))
     if oi is not None and oi < MIN_OI:
@@ -106,26 +109,31 @@ def rank(row: dict) -> float | None:
     depth = _f(row.get("bid_depth"))
     if depth is not None and depth < MIN_BID_DEPTH:
         return None
-    delta = _f(row.get("last_delta_c"))
-    delta2 = _f(row.get("last_delta2_c"))
-    if delta is None or delta2 is None:
-        return None
-    if delta2 < MIN_DELTA2:
-        return None
-    if delta > MAX_CHASE_CENTS:
-        return None
-    lo_d, hi_d = ASK_DOG
-    if not (lo_d <= ask <= hi_d):
+    delta = _f(row.get("delta_c"))
+    if delta is None:
+        delta = _f(row.get("last_delta_c"))
+    delta2 = _f(row.get("delta2_c"))
+    if delta2 is None:
+        delta2 = _f(row.get("last_delta2_c"))
+    if delta is None:
         return None
     if delta < MIN_DELTA_DOG:
         return None
+    if delta > MAX_CHASE_CENTS:
+        return None
+    if delta2 is not None and delta2 <= BOUNCE_DUMP:
+        return None
+    if not in_dog_band(ask):
+        return None
     if is_late(row.get("period")) and ask < 0.35 and delta < 4:
         return None
-    return 50.0 + delta + delta2 + (hi_d - ask) * 20.0
+    extra = delta2 if delta2 is not None else 0.0
+    lo_d, hi_d = ASK_DOG
+    return 50.0 + delta + extra + (hi_d - ask) * 20.0
 
 
 def watch_exit(avg: float, bid: float, peak: float, live: bool) -> str | None:
-    """Hard stop always. LIVE: trail after +5¢, give back 3¢ from peak. No hard reap."""
+    """Hard stop always. LIVE: trail after +5¢, give back 3¢ from peak."""
     if not (avg and bid):
         return None
     if bid <= avg - HARD_STOP:

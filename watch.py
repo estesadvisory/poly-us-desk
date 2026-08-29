@@ -115,9 +115,14 @@ def main():
     e = env()
     last_cut = {}
     peak = load_peak()
+    last_hb = 0.0
     while True:
         try:
             pos = signed("GET", "/v1/portfolio/positions", e).get("positions") or {}
+            now_hb = time.time()
+            if now_hb - last_hb >= 30:
+                print(json.dumps({"ok": True, "role": "watch", "open": len(pos)}), flush=True)
+                last_hb = now_hb
             for gone in [s for s in list(peak) if s not in pos]:
                 peak.pop(gone, None)
             later, live_set = tape_sets()

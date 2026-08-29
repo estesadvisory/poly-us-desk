@@ -1,8 +1,11 @@
 #!/usr/bin/env python3
-"""Fast public tape. No LLM. Target <15s. Writes ~/.grok/desk/tape.md"""
+"""Fast public tape. No LLM. Target <15s. Writes ~/.grok/desk/tape.md
+  python3 research.py          # full league scan
+  python3 research.py --hot    # re-BBO live/soon slugs only
+"""
 from __future__ import annotations
 import concurrent.futures, json, sys, urllib.request, urllib.parse
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -145,22 +148,29 @@ def main():
         ask, bid, spr = q.get("ask") or 0, q.get("bid") or 0, q.get("spr")
         old = prev.get(s) or {}
         last = q.get("last") or 0
-        hist = [x for x in (old.get("lasts") or []) if x]
-        if old.get("last") and (not hist or hist[-1] != old.get("last")):
-            hist.append(old["last"])
-        hist = hist[-3:]
-        last_delta_c = round((last - hist[-1]) * 100, 2) if hist and last else None
-        last_delta2_c = round((hist[-1] - hist[-2]) * 100, 2) if len(hist) >= 2 else None
+        bid_hist = [x for x in (old.get("bids") or []) if x]
+        if old.get("bid") and (not bid_hist or bid_hist[-1] != old.get("bid")):
+            bid_hist.append(old["bid"])
+        bid_hist = bid_hist[-3:]
+        last_hist = [x for x in (old.get("lasts") or []) if x]
+        if old.get("last") and (not last_hist or last_hist[-1] != old.get("last")):
+            last_hist.append(old["last"])
+        last_hist = last_hist[-3:]
+        delta_c = round((bid - bid_hist[-1]) * 100, 2) if bid_hist and bid else None
+        delta2_c = round((bid_hist[-1] - bid_hist[-2]) * 100, 2) if len(bid_hist) >= 2 else None
+        last_delta_c = round((last - last_hist[-1]) * 100, 2) if last_hist and last else None
+        last_delta2_c = round((last_hist[-1] - last_hist[-2]) * 100, 2) if len(last_hist) >= 2 else None
+        q["delta_c"] = delta_c
+        q["delta2_c"] = delta2_c
         q["last_delta_c"] = last_delta_c
         q["last_delta2_c"] = last_delta2_c
-        q["delta_c"] = last_delta_c
-        q["delta2_c"] = last_delta2_c
         now_q[s] = {
             "bid": bid,
             "ask": ask,
             "last": last,
             "ts": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
-            "lasts": (hist + [last])[-3:] if last else hist,
+            "bids": (bid_hist + [bid])[-3:] if bid else bid_hist,
+            "lasts": (last_hist + [last])[-3:] if last else last_hist,
         }
         row = {**m, **q}
         if m["kind"] != "aec":
@@ -186,7 +196,7 @@ def main():
         "## LIVE",
     ]
     for r in live[:8]:
-        lines.append(f"- {r['kind']} {r['slug']} {r['lg']} {r['period']} {r.get('score')} rank {r.get('rank')} d {r.get('last_delta_c')}/{r.get('last_delta2_c')} bid {r['bid']} last {r.get('last')} ask {r['ask']} | {r['title']}")
+        lines.append(f"- {r['kind']} {r['slug']} {r['lg']} {r['period']} {r.get('score')} rank {r.get('rank')} d {r.get('delta_c')}/{r.get('delta2_c')} bid {r['bid']} last {r.get('last')} ask {r['ask']} | {r['title']}")
     lines += ["", f"## SOON ≤{SOON_MIN}m (ok to wait)"]
     for r in soon_l[:6]:
         lines.append(f"- {r['slug']} in {r.get('minutes_to_start')}m score {r.get('score')} bid {r['bid']} ask {r['ask']} spr {r['spr']} | {r['title']}")
@@ -214,5 +224,106 @@ def main():
     print(OUT.read_text())
 
 
+def hot():
+    """Re-BBO slugs already on tape. No league crawl."""
+    now = datetime.now(timezone.utc)
+    if not OUTJ.exists():
+        return main()
+    try:
+        tape = json.loads(OUTJ.read_text())
+    except Exception:
+        return main()
+    rows = list(tape.get("live") or []) + list(tape.get("soon") or [])
+    slugs = [r.get("slug") for r in rows if r.get("slug")]
+    slugs = list(dict.fromkeys(slugs))
+    if not slugs:
+        return main()
+    meta = {r["slug"]: r for r in rows if r.get("slug")}
+    prev = {}
+    if QUOTES.exists():
+        try:
+            prev = json.loads(QUOTES.read_text())
+        except Exception:
+            prev = {}
+    with concurrent.futures.ThreadPoolExecutor(max_workers=12) as ex:
+        quotes = list(ex.map(bbo, slugs))
+    live, soon_l, nxt, reject, now_q = [], [], [], [], {}
+    ban = skips()
+    for q in quotes:
+        s = q.get("slug")
+        if q.get("error") or s not in meta or s in ban:
+            continue
+        m = dict(meta[s])
+        ask, bid, spr = q.get("ask") or 0, q.get("bid") or 0, q.get("spr")
+        old = prev.get(s) or {}
+        last = q.get("last") or 0
+        bid_hist = [x for x in (old.get("bids") or []) if x]
+        if old.get("bid") and (not bid_hist or bid_hist[-1] != old.get("bid")):
+            bid_hist.append(old["bid"])
+        bid_hist = bid_hist[-3:]
+        last_hist = [x for x in (old.get("lasts") or []) if x]
+        if old.get("last") and (not last_hist or last_hist[-1] != old.get("last")):
+            last_hist.append(old["last"])
+        last_hist = last_hist[-3:]
+        delta_c = round((bid - bid_hist[-1]) * 100, 2) if bid_hist and bid else None
+        delta2_c = round((bid_hist[-1] - bid_hist[-2]) * 100, 2) if len(bid_hist) >= 2 else None
+        last_delta_c = round((last - last_hist[-1]) * 100, 2) if last_hist and last else None
+        last_delta2_c = round((last_hist[-1] - last_hist[-2]) * 100, 2) if len(last_hist) >= 2 else None
+        q["delta_c"] = delta_c
+        q["delta2_c"] = delta2_c
+        q["last_delta_c"] = last_delta_c
+        q["last_delta2_c"] = last_delta2_c
+        now_q[s] = {
+            "bid": bid,
+            "ask": ask,
+            "last": last,
+            "ts": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+            "bids": (bid_hist + [bid])[-3:] if bid else bid_hist,
+            "lasts": (last_hist + [last])[-3:] if last else last_hist,
+        }
+        row = {**m, **q}
+        scored = risk.rank(row)
+        row["rank"] = round(scored, 3) if scored is not None else None
+        if m.get("live") and spr is not None and spr <= 0.02:
+            live.append(row)
+        elif m.get("soon"):
+            soon_l.append(row)
+        else:
+            nxt.append(row)
+    live.sort(key=lambda r: (-(r.get("rank") or -1), r.get("spr") or 9))
+    payload = {
+        "asof": now.strftime("%Y-%m-%dT%H:%M:%SZ"),
+        "live": live[:8],
+        "soon": soon_l[:6],
+        "later": tape.get("later") or nxt[:4],
+        "ttr": tape.get("ttr") or [],
+        "reject": reject[:8],
+        "scanned": len(slugs),
+        "hot": True,
+    }
+    OUTJ.write_text(json.dumps(payload, indent=2) + "\n")
+    merged = prev
+    merged.update(now_q)
+    QUOTES.write_text(json.dumps(merged, indent=2) + "\n")
+    lines = [
+        f"# tape {now.strftime('%Y-%m-%d %H:%M')}Z hot",
+        f"live {len(live)} soon {len(soon_l)} scanned {len(slugs)}",
+        "",
+        "## LIVE",
+    ]
+    for r in live[:8]:
+        lines.append(
+            f"- {r.get('kind')} {r['slug']} {r.get('lg')} {r.get('period')} {r.get('score')} "
+            f"rank {r.get('rank')} d {r.get('delta_c')}/{r.get('delta2_c')} bid {r.get('bid')} "
+            f"last {r.get('last')} ask {r.get('ask')} | {r.get('title')}"
+        )
+    OUT.write_text("\n".join(lines) + "\n")
+    print(OUT.read_text())
+
+
 if __name__ == "__main__":
-    main()
+    if "--hot" in sys.argv:
+        hot()
+    else:
+        main()
+

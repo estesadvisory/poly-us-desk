@@ -33,6 +33,14 @@ def opens_from_last(text: str) -> int:
     return 0
 
 
+def live_dogs(tape: dict) -> bool:
+    for r in tape.get("live") or []:
+        ask = float(r.get("ask") or 0)
+        if r.get("live") and risk.in_dog_band(ask):
+            return True
+    return False
+
+
 def main():
     desklock.claim("loop")
     sess = DESK / "session.json"
@@ -51,19 +59,39 @@ def main():
         except TimeoutExpired as ex:
             out = (ex.stdout or b"").decode() if isinstance(ex.stdout, bytes) else (ex.stdout or "")
             print(json.dumps({"ok": False, "stage": "hum_timeout"}), flush=True)
-        if out:
-            print(out.strip().splitlines()[-1], flush=True)
-        elif err:
+        action_line, ledger_line = "", ""
+        for ln in (out or "").splitlines():
+            ln = ln.strip()
+            if not ln:
+                continue
+            if '"action"' in ln or '"stage"' in ln:
+                action_line = ln
+            ledger_line = ln
+        if action_line:
+            print(action_line, flush=True)
+        if ledger_line and ledger_line != action_line:
+            print(ledger_line, flush=True)
+        elif err and not out:
             print(err[-200], flush=True)
+        try:
+            (DESK / "STATUS.md").write_text(
+                f"# desk {risk.VERSION}\n\n"
+                f"updated: {time.strftime('%Y-%m-%dT%H:%M:%SZ', time.gmtime())}\n"
+                f"loop_pid: {os.getpid()}\n"
+                f"action: {action_line or 'none'}\n"
+                f"ledger: {ledger_line or 'none'}\n"
+            )
+        except Exception:
+            pass
         n = opens_from_last(out)
-        qualified = False
+        hot = False
         if TAPE.exists():
             try:
                 t = json.loads(TAPE.read_text())
-                qualified = any(risk.rank(r) is not None for r in (t.get("live") or []))
+                hot = live_dogs(t) or any(risk.rank(r) is not None for r in (t.get("live") or []))
             except Exception:
                 pass
-        time.sleep(risk.OPEN_SCAN_SEC if (n or qualified) else risk.IDLE_SCAN_SEC)
+        time.sleep(risk.OPEN_SCAN_SEC if (n or hot) else risk.IDLE_SCAN_SEC)
 
 
 if __name__ == "__main__":
