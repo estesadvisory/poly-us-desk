@@ -22,6 +22,7 @@ python3 ~/.grok/desk/ledger.py
 
 alive() { f="$1"; [ -f "$f" ] && kill -0 "$(cat "$f")" 2>/dev/null; }
 if alive ~/.grok/desk/loop.pid; then echo "loop already running $(cat ~/.grok/desk/loop.pid)"; else
+  rm -f ~/.grok/desk/session.json
   nohup python3 -u ~/.grok/desk/loop.py  >> ~/.grok/desk/loop.log  2>&1 &
   echo "started loop $!"
 fi

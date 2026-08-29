@@ -104,9 +104,7 @@ def rank(row: dict) -> float | None:
 
 
 def watch_exit(avg: float, bid: float, peak: float, live: bool) -> str | None:
-    """Hard stop always. LIVE: trail after +5¢, give back 3¢ from peak.
-    No hard reap — that is how v7 would have sold PHI at +8¢.
-    """
+    """Hard stop always. LIVE: trail after +5¢, give back 3¢ from peak. No hard reap."""
     if not (avg and bid):
         return None
     if bid <= avg - HARD_STOP:

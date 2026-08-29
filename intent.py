@@ -81,10 +81,12 @@ def ensure_session(bp: float) -> dict:
     return rec
 
 
-def session_halt(bp: float) -> bool:
+def session_halt(bp: float, opens) -> bool:
     rec = ensure_session(bp)
     start = float(rec.get("start_bp") or bp)
-    return (start - bp) >= float(rec.get("max_loss") or risk.MAX_DAY_LOSS)
+    marked = sum(float(o.get("mark") or o.get("cost") or 0) for o in (opens or []))
+    equity = bp + marked
+    return (start - equity) >= float(rec.get("max_loss") or risk.MAX_DAY_LOSS)
 
 
 def dump(out):
@@ -114,7 +116,7 @@ def main():
         )
         return
     bp = float(b.get("buyingPower") or 0)
-    if session_halt(bp):
+    if session_halt(bp, opens):
         dump({"action": "HOLD", "reason": "session loss circuit", "buyingPower": bp, "working": working})
         return
     if cooling():

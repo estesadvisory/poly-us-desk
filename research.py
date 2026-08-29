@@ -97,7 +97,14 @@ def main():
             except Exception:
                 continue
             period = (e.get("period") or "").strip()
-            live_g = period not in ("", "NS")
+            ended = e.get("ended") is True
+            api_live = e.get("live")
+            if api_live is True:
+                live_g = not ended
+            elif api_live is False:
+                live_g = False
+            else:
+                live_g = (not ended) and period not in ("", "NS")
             mins = (ts - now).total_seconds() / 60.0
             # Overdue NS (posted start passed, still not in play) is still a queue for ≤20m.
             soon_g = (not live_g) and (-SOON_MIN <= mins <= SOON_MIN)

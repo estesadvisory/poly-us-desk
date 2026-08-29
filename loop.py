@@ -6,6 +6,7 @@ Desk TUI owns this. Do not run a second copy.
 from __future__ import annotations
 import json, os, subprocess, sys, time
 from pathlib import Path
+from subprocess import TimeoutExpired
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lock as desklock
@@ -34,23 +35,35 @@ def opens_from_last(text: str) -> int:
 
 def main():
     desklock.claim("loop")
+    sess = DESK / "session.json"
+    if sess.exists():
+        try:
+            sess.unlink()
+        except Exception:
+            pass
     print(json.dumps({"ok": True, "role": "loop", "version": risk.VERSION, "pid": os.getpid()}), flush=True)
     while True:
-        r = subprocess.run(["python3", str(HUM)], capture_output=True, text=True, timeout=90)
-        out = (r.stdout or "").strip()
-        err = (r.stderr or "").strip()
+        out, err = "", ""
+        try:
+            r = subprocess.run(["python3", str(HUM)], capture_output=True, text=True, timeout=180)
+            out = (r.stdout or "").strip()
+            err = (r.stderr or "").strip()
+        except TimeoutExpired as ex:
+            out = (ex.stdout or b"").decode() if isinstance(ex.stdout, bytes) else (ex.stdout or "")
+            print(json.dumps({"ok": False, "stage": "hum_timeout"}), flush=True)
         if out:
-            print(out.splitlines()[-1], flush=True)
+            print(out.strip().splitlines()[-1], flush=True)
         elif err:
             print(err[-200], flush=True)
         n = opens_from_last(out)
-        if n <= 0 and TAPE.exists():
+        qualified = False
+        if TAPE.exists():
             try:
                 t = json.loads(TAPE.read_text())
-                n = 0 if not (t.get("live") or t.get("soon")) else n
+                qualified = any(risk.rank(r) is not None for r in (t.get("live") or []))
             except Exception:
                 pass
-        time.sleep(risk.OPEN_SCAN_SEC if n else risk.IDLE_SCAN_SEC)
+        time.sleep(risk.OPEN_SCAN_SEC if (n or qualified) else risk.IDLE_SCAN_SEC)
 
 
 if __name__ == "__main__":

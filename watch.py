@@ -67,6 +67,11 @@ def cut_now(slug):
     line = (r.stdout or r.stderr or "").strip().splitlines()
     last = line[-1] if line else ""
     print(f"CUT {slug} {last}", flush=True)
+    try:
+        body = json.loads(last)
+        return bool(body.get("ok")) or body.get("stage") == "already_flat"
+    except Exception:
+        return False
 
 
 def tape_sets():
@@ -108,10 +113,9 @@ def main():
     desklock.claim("watch")
     print(json.dumps({"ok": True, "role": "watch", "version": risk.VERSION}), flush=True)
     e = env()
-    deadline = time.time() + 12 * 3600
     last_cut = {}
     peak = load_peak()
-    while time.time() < deadline:
+    while True:
         try:
             pos = signed("GET", "/v1/portfolio/positions", e).get("positions") or {}
             for gone in [s for s in list(peak) if s not in pos]:
@@ -131,23 +135,21 @@ def main():
                     continue
                 if later is not None and slug in later:
                     print(f"EXIT_TTR {slug}", flush=True)
-                    cut_now(slug)
-                    last_cut[slug] = now
-                    peak.pop(slug, None)
+                    if cut_now(slug):
+                        last_cut[slug] = now
+                        peak.pop(slug, None)
                     continue
                 is_live = True if live_set is None else slug in live_set
                 side = risk.watch_exit(avg, bid, peak[slug], is_live)
                 if side:
                     print(f"{side} {slug} bid={bid} avg={avg} peak={peak[slug]} live={is_live}", flush=True)
-                    cut_now(slug)
-                    last_cut[slug] = now
-                    peak.pop(slug, None)
+                    if cut_now(slug):
+                        last_cut[slug] = now
+                        peak.pop(slug, None)
             save_peak(peak)
         except Exception as ex:
             print(f"WATCH_ERR {type(ex).__name__}", flush=True)
         time.sleep(4)
-    print("FAILED", flush=True)
-    sys.exit(1)
 
 
 if __name__ == "__main__":

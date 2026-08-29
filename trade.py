@@ -193,7 +193,6 @@ def _buy(e, slug, usd):
     md = bbo(slug)
     ask, bid = px(md.get("bestAsk")), px(md.get("bestBid"))
     row["ask"], row["bid"], row["spr"] = ask, bid, round(ask - bid, 4) if ask and bid else None
-    row["live"] = True
     if risk.rank(row) is None:
         print(json.dumps({"ok": False, "stage": "gate", "bid": bid, "ask": ask}))
         return
