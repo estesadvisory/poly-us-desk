@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """Venue-agnostic risk. Polymarket US is the first adapter, not the policy.
 
-Desk version v13 (see ~/.grok/desk/VERSION).
-Loop buys; watch sells. LIVE dogs 18–42¢ on a +2¢ *bid* tick (v11 fire path).
-Last-trade is optional confirmation. No 3-way, no 43–57, no 0–0 Q1.
+Desk version v14 (see ~/.grok/desk/VERSION).
+LIVE 18–42¢ aec- that is not dumping this scan. +2¢-in-8s was a starve.
+No 3-way, no 43–57, no 0–0 Q1 football. Baseball 1st 0–0 is live.
 """
 from __future__ import annotations
 
-VERSION = "v13"
+VERSION = "v14"
 RING_USD = 10.0
 CLIP_USD = 2.0
 MAX_USD = 2.0
@@ -25,11 +25,10 @@ HOT_MAX_AGE_SEC = 25
 TWO_WAY_PREFIX = "aec-"
 BAN_PREFIX = "atc-"
 FEE_COEF = 0.06
-MIN_DELTA_DOG = 2.0
-BOUNCE_DUMP = -2.0  # prior bid tick this red → bounce, skip
+MIN_DELTA_DOG = -0.5  # reject dumps; flat or up is enough
 MAX_CHASE_CENTS = 8.0
-MIN_OI = 5000.0
-MIN_BID_DEPTH = 3
+MIN_OI = 3000.0
+MIN_BID_DEPTH = 2
 BUY_COOLDOWN_SEC = 900
 MAX_DAY_LOSS = 2.0
 LATE_PERIOD = ("5th", "6th", "7th", "8th", "9th", "Q4", "4Q", "2H")
@@ -70,17 +69,16 @@ def is_late(period) -> bool:
 
 
 def score_ok(score, period) -> bool:
-    """Ban 0-0 in Q1/1st. Missing score is OK if period is already in play (not Q1/NS)."""
+    """Ban 0-0 only in football Q1 / NS / 1H. Baseball Top 1st 0-0 is a live game."""
     p = period or ""
-    early = any(x in p for x in ("Q1", "1st", "NS", "1H", "Top 1st", "Bot 1st"))
     if not score or not isinstance(score, str) or "-" not in score.replace("–", "-"):
-        return not early
+        return not (p in ("NS", "") or p == "Q1")
     try:
         a, b = score.replace("–", "-").split("-", 1)
         a, b = int(a.strip()), int(b.strip())
     except Exception:
-        return not early
-    if a == 0 and b == 0 and early:
+        return True
+    if a == 0 and b == 0 and ("Q1" in p or p in ("NS", "1H")):
         return False
     return True
 
@@ -91,7 +89,7 @@ def in_dog_band(ask: float) -> bool:
 
 
 def rank(row: dict) -> float | None:
-    """None = do not buy. LIVE aec- dog 18–42¢, +2¢ bid tick, not a bounce, book ≤2¢."""
+    """None = do not buy. LIVE aec- 18–42¢, book ≤2¢, not dumping this scan."""
     slug = row.get("slug") or ""
     if not slug.startswith(TWO_WAY_PREFIX):
         return None
@@ -109,25 +107,18 @@ def rank(row: dict) -> float | None:
     depth = _f(row.get("bid_depth"))
     if depth is not None and depth < MIN_BID_DEPTH:
         return None
+    if not in_dog_band(ask):
+        return None
     delta = _f(row.get("delta_c"))
     if delta is None:
         delta = _f(row.get("last_delta_c"))
-    delta2 = _f(row.get("delta2_c"))
-    if delta2 is None:
-        delta2 = _f(row.get("last_delta2_c"))
     if delta is None:
-        return None
+        delta = 0.0
     if delta < MIN_DELTA_DOG:
         return None
     if delta > MAX_CHASE_CENTS:
         return None
-    if delta2 is not None and delta2 <= BOUNCE_DUMP:
-        return None
-    if not in_dog_band(ask):
-        return None
-    if is_late(row.get("period")) and ask < 0.35 and delta < 4:
-        return None
-    extra = delta2 if delta2 is not None else 0.0
+    extra = _f(row.get("delta2_c")) or 0.0
     lo_d, hi_d = ASK_DOG
     return 50.0 + delta + extra + (hi_d - ask) * 20.0
 

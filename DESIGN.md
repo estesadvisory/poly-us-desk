@@ -1,6 +1,6 @@
 # Desk v13 — architecture
 
-**Live version: v13.** Start from a fresh TUI pasting `GO.md`.
+**Live version: v14.** Start from a fresh TUI pasting `GO.md`.
 
 ## What broke
 
@@ -30,6 +30,4 @@ Universe scan is cheap enough; the hot path is what catches the +2¢ bid tick.
 
 ## Policy (v13)
 
-LIVE `aec-` **18–42¢**. **One +2¢ bid uptick** (v11 fire path). Reject bounce if prior bid tick ≤ −2¢. Spread ≤ 2¢. OI ≥ 5k, depth ≥ 3. No 3-way, no 43–57, no 0–0 Q1, no $10. Clip $2 × max 2. Stop −3¢. Trail +5¢ / give 3¢. Session −$2 from this GO.
-
-HOLD is correct when *no live 18–42 with a +2¢ bid tick* exists — not when last-trade history is empty.
+LIVE `aec-` **18–42¢**, book ≤2¢, **not dumping** (bid tick > −0.5¢). No +2¢-in-8s requirement. Baseball Top 1st 0–0 is live; football Q1 0–0 is not. No 3-way, no 43–57, no $10. Clip $2 × max 2. Stop −3¢. Trail +5¢. Session −$2 from this GO.
