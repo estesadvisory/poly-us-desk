@@ -1,5 +1,6 @@
-# CoS desk v13
+# CoS desk v16
 
-Version: **v13** (`~/.grok/desk/VERSION`).
+Version: **v16** (this repo `VERSION`).
 
-Fresh TUI: paste `~/.grok/desk/GO.md` (`nohup` loop + watch). This design session does not run the machine.
+One Terminal: `python3 desk.py` (see `GO.md`). Buys default HOLD. Logs: `~/.grok/desk/logs/`.
+Edit → `reload` or `quit` and run again. This file does not start the machine.

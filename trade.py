@@ -10,14 +10,15 @@ from pathlib import Path
 from cryptography.hazmat.primitives.asymmetric import ed25519
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
-import risk
 import lock as desklock
+import paths
+import risk
 
 API = "https://api.polymarket.us"
 PUB = "https://gateway.polymarket.us"
-ENVP = Path.home() / ".grok/secrets/polymarket-us.env"
-SKIP = Path.home() / ".grok/desk/skip_slugs.txt"
-TAPE = Path.home() / ".grok/desk/tape.json"
+ENVP = paths.ENVP
+SKIP = paths.DESK / "skip_slugs.txt"
+TAPE = paths.DESK / "tape.json"
 RING = risk.RING_USD
 MAX_OPEN = risk.MAX_OPEN
 MIN_USD, MAX_USD = risk.CLIP_USD, risk.MAX_USD
@@ -111,7 +112,8 @@ def books(e):
             }
         )
     out = {"buyingPower": bp, "working": round(bp - 10, 4), "ring": 10, "open": open_, "asof": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
-    (Path.home() / ".grok/desk/books.json").write_text(json.dumps(out) + "\n")
+    paths.ensure_desk()
+    (paths.DESK / "books.json").write_text(json.dumps(out) + "\n")
     print(json.dumps(out))
     return out
 
@@ -135,7 +137,7 @@ def persist_ledger():
     import subprocess
 
     try:
-        subprocess.run(["python3", str(Path.home() / ".grok/desk/ledger.py")], capture_output=True, text=True, timeout=45)
+        subprocess.run(["python3", str(paths.REPO / "ledger.py")], capture_output=True, text=True, timeout=45)
     except Exception:
         pass
 
@@ -147,6 +149,12 @@ def skipped(slug):
 
 
 def buy(e, slug, usd):
+    if paths.HOLD.exists():
+        print(json.dumps({"ok": False, "stage": "operator_hold", "slug": slug}))
+        return
+    if paths.PAPER:
+        print(json.dumps({"ok": True, "stage": "paper", "cmd": "buy", "slug": slug, "usd": usd}))
+        return
     with desklock.order_lock():
         _buy(e, slug, usd)
 
@@ -212,6 +220,9 @@ def _buy(e, slug, usd):
 
 
 def cut(e, slug):
+    if paths.PAPER:
+        print(json.dumps({"ok": True, "stage": "paper", "cmd": "cut", "slug": slug}))
+        return
     with desklock.order_lock():
         _cut(e, slug)
 
@@ -246,7 +257,7 @@ def _cut(e, slug):
     if ok:
         skip_add(slug)
         if avg and bid and bid < avg:
-            p = Path.home() / ".grok/desk/last_cut"
+            p = paths.DESK / "last_cut"
             rec = {}
             if p.exists():
                 try:

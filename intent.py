@@ -8,9 +8,10 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import paths
 import risk
 
-DESK = Path.home() / ".grok/desk"
+DESK = paths.DESK
 TAPE = DESK / "tape.json"
 SKIP = DESK / "skip_slugs.txt"
 OUT = DESK / "intent.json"
@@ -27,7 +28,7 @@ def skips():
 
 
 def books():
-    r = subprocess.run(["python3", str(DESK / "trade.py"), "books"], capture_output=True, text=True, timeout=30)
+    r = subprocess.run(["python3", str(paths.REPO / "trade.py"), "books"], capture_output=True, text=True, timeout=30)
     line = (r.stdout or "").strip().splitlines()
     if not line:
         return None
@@ -48,7 +49,7 @@ def tape_full_age_sec() -> float:
 
 def refresh_tape():
     age = tape_full_age_sec()
-    args = [str(DESK / "research.py")]
+    args = [str(paths.REPO / "research.py")]
     if 0 <= age < risk.HOT_MAX_AGE_SEC:
         args.append("--hot")
     subprocess.run(["python3", *args], capture_output=True, text=True, timeout=60)
@@ -132,6 +133,18 @@ def dump(out):
 
 
 def main():
+    if paths.HOLD.exists():
+        b = books() or {}
+        dump(
+            {
+                "action": "HOLD",
+                "reason": "operator hold",
+                "buyingPower": b.get("buyingPower"),
+                "working": b.get("working"),
+                "open": [o.get("slug") for o in (b.get("open") or [])],
+            }
+        )
+        return
     refresh_tape()
     tape = json.loads(TAPE.read_text()) if TAPE.exists() else {}
     b = books()

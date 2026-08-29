@@ -1,33 +1,35 @@
-# Desk v13 — architecture
+# Desk v16 — architecture
 
-**Live version: v15.** Start from a fresh TUI pasting `GO.md`.
+**Live version: v16.** One Terminal: `python3 desk.py`. Zero LLM in the loop.
 
-## What broke
+## What we kept / dropped
 
-v11 **bid-tick** rank fired 13 programmatic buys on 2026-08-29 (wrong *names*, but the machine traded).
-v12 (PR #4) switched momentum to **two last-trade prints** and required last≈bid. Last-trades are sparse; the afternoon GO HOLDed every cycle. That is the waste.
+| Attempt | Keep | Drop |
+|---------|------|------|
+| v11 | BBO fire path (it actually traded) | 18–42-only religion |
+| v12 | — | last-trade + score AND-gates (starved) |
+| v13 | all operational US leagues | — |
+| v14 | reject dumping bids | — |
+| v15 | 12–88 exit-able, $10 ring, $2 × 2 | rank that preferred 50¢ fee-max |
+| ledger | trail winners, stop losers, no 3-ways, no scratch | 1¢ scalps |
 
-## Roles (unchanged)
-
-```
-one CoS TUI  →  reports / nohup pids / never orders
-loop.py      →  ONLY BUYER   (loop.pid)
-watch.py     →  ONLY SELLER  (watch.pid, 4s on open tickets)
-orders.lock  →  one buy or cut at a time
-```
-
-## Market watch (efficient)
+## Roles
 
 ```
-research.py           full scan ~20s   all operational US leagues + ATP/WTA → live/soon first, ≤100 BBO
-research.py --hot     8s               re-BBO live/soon slugs only (no league crawl)
-intent.py             picks BUY        uses --hot if tape <25s old
-loop.py               cadence          8s while any live 18–42¢ exists, else 20s
-watch.py              exits            GET positions + BBO *open* slugs every 4s
+desk.py (Terminal)  →  HUD + commands + restart dead children
+research            →  all-league tape / --hot re-BBO
+loop.py             →  ONLY BUYER
+watch.py            →  ONLY SELLER  (4s on open tickets)
+orders.lock         →  one buy or cut at a time
 ```
 
-Universe scan is cheap enough; the hot path is what catches the +2¢ bid tick.
+Code is the git repo. State is `~/.grok/desk`. After an edit: `reload` or `quit` + run again.
 
-## Policy (v13)
+## Policy (v16)
 
-Mike’s rules: all US sports, two $2 tickets, reap (+5¢ trail), cut (−3¢), fast micros. `$10` ring. LIVE `aec-` with a 12–88¢ book (exit-able). No 18–42, no momentum tick, no 0–0 religion.
+- $10 ring. Working = the rest. Clip $2, max 2.
+- All operational US leagues. LIVE `aec-` only.
+- 12–88¢ so we can exit. First print allowed. `delta_c < 0` rejected. Bounce (prior ≤ −2¢) rejected.
+- Rank: tight book + lower taker fee + small uptick bonus.
+- Stop −3¢. Trail arm +5¢, give back 3¢. No scratch at +1–2¢.
+- Per-slug 15m after a losing cut. Session −$2 circuit from this GO.

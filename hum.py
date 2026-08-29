@@ -4,7 +4,10 @@ from __future__ import annotations
 import json, subprocess, sys
 from pathlib import Path
 
-DESK = Path.home() / ".grok/desk"
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+import paths
+
+DESK = paths.DESK
 
 
 def run(args):
@@ -18,7 +21,7 @@ def run(args):
 
 def main():
     for _ in range(4):
-        intent_raw = run([str(DESK / "intent.py")])
+        intent_raw = run([str(paths.REPO / "intent.py")])
         line = intent_raw.splitlines()[-1]
         intent = json.loads(line)
         action = intent.get("action")
@@ -28,7 +31,7 @@ def main():
             break
         if action == "BUY" and slug:
             usd = str(intent.get("usd") or 2)
-            raw = run([str(DESK / "trade.py"), "buy", slug, "--usd", usd])
+            raw = run([str(paths.REPO / "trade.py"), "buy", slug, "--usd", usd])
             print(raw)
             print(intent.get("report") or line)
             try:
@@ -40,7 +43,7 @@ def main():
             continue
         print(line)
         break
-    print(run([str(DESK / "ledger.py")]))
+    print(run([str(paths.REPO / "ledger.py")]))
 
 
 if __name__ == "__main__":

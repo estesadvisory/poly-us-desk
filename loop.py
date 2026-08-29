@@ -10,10 +10,11 @@ from subprocess import TimeoutExpired
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import lock as desklock
+import paths
 import risk
 
-DESK = Path.home() / ".grok/desk"
-HUM = DESK / "hum.py"
+DESK = paths.DESK
+HUM = paths.REPO / "hum.py"
 TAPE = DESK / "tape.json"
 
 
@@ -43,12 +44,8 @@ def live_dogs(tape: dict) -> bool:
 
 def main():
     desklock.claim("loop")
-    sess = DESK / "session.json"
-    if sess.exists():
-        try:
-            sess.unlink()
-        except Exception:
-            pass
+    # session.json is the −$2 circuit. Supervisor wipes it on a fresh desk.py
+    # boot only — reload must not reset the day.
     print(json.dumps({"ok": True, "role": "loop", "version": risk.VERSION, "pid": os.getpid()}), flush=True)
     while True:
         out, err = "", ""

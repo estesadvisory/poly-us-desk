@@ -1,51 +1,60 @@
-# Paste this into a **fresh** CoS TUI. One TUI. No other desk session.
+# Run in **one** Terminal. Not Cursor. Not a Grok TUI.
 
-You are the CoS for the Estes Polymarket US micro desk, **v15**.
-
-You talk to Mike. Python trades. You do not.
-
-## Roles (do not break)
-
-| Who | Does | Does not |
-|-----|------|----------|
-| **loop.py** | Only **buyer**. Tape → rank → BUY. Session circuit. | **Never sell.** |
-| **watch.py** | Only **seller**. 4s trail / −3¢ / LATER TTR | BUY, research, LLM |
-| **You (this TUI)** | `nohup` those two if pids dead. **Pulse from files into this chat every 60s** (do not go silent). | Orders, trading subagents, a second loop/watch |
+You are sitting at a shell. Python trades. You type commands.
 
 ## Start
 
 ```bash
+cd ~/repos/poly-us-desk
 test -f ~/.grok/secrets/polymarket-us.env || { echo "NO ENV"; exit 1; }
-test "$(cat ~/.grok/desk/VERSION)" = "v15" || { echo "VERSION mismatch"; cat ~/.grok/desk/VERSION; exit 1; }
-python3 ~/.grok/desk/trade.py books
-python3 ~/.grok/desk/ledger.py
-
-alive() { f="$1"; [ -f "$f" ] && kill -0 "$(cat "$f")" 2>/dev/null; }
-if alive ~/.grok/desk/loop.pid; then echo "loop already running $(cat ~/.grok/desk/loop.pid)"; else
-  rm -f ~/.grok/desk/session.json
-  nohup python3 -u ~/.grok/desk/loop.py  >> ~/.grok/desk/loop.log  2>&1 &
-  echo "started loop $!"
-fi
-if alive ~/.grok/desk/watch.pid; then echo "watch already running $(cat ~/.grok/desk/watch.pid)"; else
-  nohup python3 -u ~/.grok/desk/watch.py >> ~/.grok/desk/watch.log 2>&1 &
-  echo "started watch $!"
-fi
+test "$(cat VERSION)" = "v16" || { echo "VERSION mismatch"; cat VERSION; exit 1; }
+python3 desk.py
 ```
 
-If start prints `already_running`, leave it.
+Default: **research + seller up, buys HOLD**. Type `go` when you want new $2 tickets.
 
-Do **not** run `hum.py` / `intent.py` / `trade.py buy|cut` by hand.
+```bash
+python3 desk.py --go          # arm buys immediately
+python3 desk.py --no-buy      # leftover / watch-only
+python3 desk.py --paper       # no live orders
+```
 
-## Book
+Do **not** `nohup` `loop.py` / `watch.py` by hand. Do **not** run `hum.py` / `intent.py` / `trade.py buy|cut` by hand.
+
+## Commands
+
+| Type | Effect |
+|------|--------|
+| `status` | BP, working, open tickets, child pids |
+| `hold` | pause new buys (seller stays up) |
+| `go` | resume buys |
+| `reload` | restart children after you edit this repo |
+| `skip <slug>` | never buy that market this session |
+| `books` | refresh venue snapshot |
+| `quit` | stop everything (Ctrl-C also) |
+
+## Edit → halt → restart
+
+1. `hold` (optional, stops new buys immediately)
+2. Edit files in `~/repos/poly-us-desk` (Cursor is fine)
+3. `reload` in the desk terminal — children exec the new code
+4. Or `quit`, then `python3 desk.py` again
+
+Do not edit a running child and expect it to pick up changes without `reload` / `quit`.
+
+## Logs (for a later Cursor check-in)
+
+`~/.grok/desk/logs/`
+
+- `events.jsonl` — structured start/stop/cmd/child_exit
+- `desk.log` — same in one line per event
+- `research.log` `loop.log` `watch.log` — child stdout
+
+## Book / policy
 
 - `books.json` — `open: []` means flat
-- `fills.json` + `ledger.md` — venue PnL
-- `session.json` — halt new buys if BP drops **$2 from this GO**
-- `$10` never trades. Clip $2, max 2.
+- `$10` never trades. Clip $2, max 2. Working = BP − 10.
+- LIVE `aec-` only, all US sports, 12–88¢ book, not dumping.
+- Stop −3¢. Trail +5¢. No scratch sells. No 3-ways.
 
-## Policy (v15)
-
-Mike: diversity, **two $2 tickets**, all US sports, reap wins, cut losers, fast micros.
-LIVE `aec-` 2-way with a book (12–88¢ so we can exit). No 18–42, no tick, no 0–0 ban, no 15m freeze. `$10` never. Stop −3¢. Trail +5¢. Max 2 open.
-
-US only. Never print secrets. Report ≤4 lines from files. Compact → re-read this file.
+US only. Never print secrets.
