@@ -112,7 +112,7 @@ def save_peak(peak):
 
 def main():
     desklock.claim("watch")
-    print(json.dumps({"ok": True, "role": "watch", "version": risk.VERSION}), flush=True)
+    print(json.dumps({"ok": True, "role": "watch", "version": risk.VERSION, "rev": paths.code_rev()}), flush=True)
     e = env()
     last_cut = {}
     peak = load_peak()

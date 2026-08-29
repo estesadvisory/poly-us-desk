@@ -32,7 +32,10 @@ def books():
     line = (r.stdout or "").strip().splitlines()
     if not line:
         return None
-    return json.loads(line[-1])
+    data = json.loads(line[-1])
+    if data.get("ok") is False or data.get("buyingPower") is None:
+        return None
+    return data
 
 
 def tape_full_age_sec() -> float:
@@ -57,7 +60,8 @@ def refresh_tape():
 
 def pick_buy(tape, ban, open_slugs):
     scored = []
-    for r in list(tape.get("live") or []):
+    rows = list(tape.get("live") or []) + list(tape.get("soon") or [])
+    for r in rows:
         s = r.get("slug") or ""
         if not s or s in ban or s in open_slugs:
             continue
@@ -154,11 +158,22 @@ def main():
     opens = b.get("open") or []
     working = float(b.get("working") or 0)
     # Loop never sells. Watch owns stop / trail / LATER.
-    if len(opens) >= MAX_OPEN or working < TICKET:
+    if len(opens) >= MAX_OPEN:
         dump(
             {
                 "action": "HOLD",
-                "reason": f"open={len(opens)} working={working}",
+                "reason": f"ticket_cap open={len(opens)}/{MAX_OPEN}",
+                "buyingPower": b.get("buyingPower"),
+                "working": working,
+                "open": [o.get("slug") for o in opens],
+            }
+        )
+        return
+    if working < TICKET:
+        dump(
+            {
+                "action": "HOLD",
+                "reason": f"working ${working} < clip ${TICKET}",
                 "buyingPower": b.get("buyingPower"),
                 "working": working,
                 "open": [o.get("slug") for o in opens],
@@ -171,15 +186,40 @@ def main():
         return
     cool = cooling_slugs()
     ban = skips() | {s for s in cool if s != "*legacy*"}
-    pick = pick_buy(tape, ban, {o["slug"] for o in opens})
+    open_slugs = {o["slug"] for o in opens}
+    pick = pick_buy(tape, ban, open_slugs)
     if not pick:
+        later = list(tape.get("later") or [])
+        live_rows = list(tape.get("live") or [])
+        soon_rows = list(tape.get("soon") or [])
+        unused = [r for r in live_rows + soon_rows if (r.get("slug") or "") not in open_slugs]
+        why = []
+        for r in unused + later[:6]:
+            w = risk.why_not(r)
+            if w:
+                why.append(f"{(r.get('slug') or '?')[:36]}:{w}")
+            elif (r.get("slug") or "") in ban:
+                why.append(f"{(r.get('slug') or '?')[:36]}:skip_or_cool")
+        nxt = later[0] if later else {}
+        if unused:
+            reason = f"open={len(opens)}/{MAX_OPEN} unused {len(unused)} rejected"
+        elif live_rows or soon_rows:
+            reason = f"open={len(opens)}/{MAX_OPEN} all live/soon already held"
+        else:
+            reason = f"open={len(opens)}/{MAX_OPEN} tape empty of live/soon"
         dump(
             {
                 "action": "HOLD",
-                "reason": f"open={len(opens)}/{MAX_OPEN} no live 2-way book",
+                "reason": reason,
                 "working": working,
                 "open": [o.get("slug") for o in opens],
-                "live_n": len(tape.get("live") or []),
+                "live_n": len(live_rows),
+                "soon_n": len(soon_rows),
+                "later_n": len(later),
+                "next": nxt.get("title"),
+                "next_min": nxt.get("minutes_to_start"),
+                "why": why[:8],
+                "version": risk.VERSION,
             }
         )
         return
@@ -196,6 +236,7 @@ def main():
             "minutes_to_start": row.get("minutes_to_start"),
             "reason": f"{row.get('title')} ask {row.get('ask')} spr {row.get('spr')} d {row.get('delta_c')} score {sc:.2f}",
             "report": f"CoS BUY {row['slug']} ${TICKET} ask {row.get('ask')} score {sc:.1f}",
+            "version": risk.VERSION,
         }
     )
 

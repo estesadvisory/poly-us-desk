@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """v16 rank. python3 test_rank.py"""
 from __future__ import annotations
+import research
 import risk
 
 
@@ -20,11 +21,28 @@ def row(**kw):
 
 
 def main():
-    assert risk.VERSION == "v16"
-    assert risk.MAX_OPEN == 2
+    assert risk.VERSION == "v17"
+    assert risk.MAX_OPEN >= 10
     assert risk.RING_USD == 10.0
     assert risk.rank(row()) is not None, "flat first-ish print must fire"
     assert risk.rank(row(delta_c=None)) is not None, "no history still fires"
+    soon = row(live=False, soon=True, minutes_to_start=10, ask=0.53, bid=0.52)
+    assert risk.rank(soon) is not None, "SOON 12-88 must fire"
+    soon45 = row(live=False, soon=True, minutes_to_start=40, ask=0.34, bid=0.33)
+    assert risk.rank(soon45) is not None, "40m SOON must fire"
+    assert risk.SOON_MIN >= 40
+    assert risk.rank(row(live=False, soon=False, minutes_to_start=40, ask=0.34, bid=0.33)) is not None
+    later = row(live=False, soon=False, minutes_to_start=80)
+    assert risk.rank(later) is None, "LATER must not buy"
+    assert risk.why_not(later) == "later"
+    assert risk.why_not(row(ask=0.99, bid=0.98)) == "band"
+    assert risk.why_not(row(delta_c=-1.0)) == "dump"
+    overdue = row(live=True, soon=False, minutes_to_start=-36, ask=0.41, bid=0.40)
+    assert risk.rank(overdue) is not None, "overdue NS treated live must fire"
+    assert research.event_flags(True, False, 10, "NS") == (False, False)
+    assert research.event_flags(True, False, -10, "NS") == (False, False)
+    assert research.event_flags(False, False, 30, "NS") == (False, True)
+    assert research.event_flags(False, False, -36, "NS") == (True, False)
     assert risk.rank(row(ask=0.37, bid=0.365, delta_c=1.0)) is not None, "37c uptick"
     assert risk.rank(row(ask=0.85, bid=0.84, spr=0.01)) is not None, "85c still tradable"
     assert risk.rank(row(slug="atc-epl-tot-new-tot")) is None, "3-way"
