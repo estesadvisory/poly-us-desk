@@ -21,17 +21,21 @@ def row(**kw):
 
 
 def main():
-    assert risk.VERSION == "v18"
+    assert risk.VERSION == "v19"
     assert risk.MAX_OPEN >= 10
     assert risk.RING_USD == 10.0
     assert risk.rank(row()) is not None, "flat first-ish print must fire"
     assert risk.rank(row(delta_c=None)) is not None, "no history still fires"
-    soon = row(live=False, soon=True, minutes_to_start=10, ask=0.53, bid=0.52)
-    assert risk.rank(soon) is not None, "SOON 12-88 must fire"
-    soon45 = row(live=False, soon=True, minutes_to_start=40, ask=0.34, bid=0.33)
-    assert risk.rank(soon45) is not None, "40m SOON must fire"
+    soon_flat = row(live=False, soon=True, minutes_to_start=10, ask=0.53, bid=0.52, delta_c=0.0)
+    assert risk.rank(soon_flat) is None, "SOON with no uptick must wait"
+    assert risk.why_not(soon_flat) == "soon_flat"
+    assert risk.rank(row(live=False, soon=True, minutes_to_start=10, ask=0.53, bid=0.52, delta_c=None)) is None
+    soon = row(live=False, soon=True, minutes_to_start=10, ask=0.53, bid=0.52, delta_c=1.0)
+    assert risk.rank(soon) is not None, "SOON with +1c must fire"
+    soon45 = row(live=False, soon=True, minutes_to_start=40, ask=0.34, bid=0.33, delta_c=1.0)
+    assert risk.rank(soon45) is not None, "40m ticking SOON must fire"
     assert risk.SOON_MIN >= 40
-    assert risk.rank(row(live=False, soon=False, minutes_to_start=40, ask=0.34, bid=0.33)) is not None
+    assert risk.rank(row(live=False, soon=False, minutes_to_start=40, ask=0.34, bid=0.33, delta_c=1.0)) is not None
     later = row(live=False, soon=False, minutes_to_start=80)
     assert risk.rank(later) is None, "LATER must not buy"
     assert risk.why_not(later) == "later"

@@ -2,13 +2,14 @@
 """Desk v16. $10 ring, all US sports, fire without starving, trail winners.
 
 Not a dog-band religion. 12–88¢ is so there is a book to exit.
-Dumping bids are rejected; a first print (no delta yet) is allowed so new
-games still trade. Rank prefers a tight book and a lower taker fee — not the
+Dumping bids are rejected; a LIVE first print (no delta yet) is allowed so new
+games still trade. SOON needs a bid uptick — quiet pregame books faded into
+the stop. Rank prefers a tight book and a lower taker fee — not the
 50¢ coin-flip that ate 2026-08-29.
 """
 from __future__ import annotations
 
-VERSION = "v18"
+VERSION = "v19"
 RING_USD = 10.0
 CLIP_USD = 2.0
 MAX_USD = 2.0
@@ -78,6 +79,13 @@ def is_actionable(row: dict) -> bool:
     return bucket(False, row.get("minutes_to_start")) == "SOON"
 
 
+def soon_unticked(row: dict, delta) -> bool:
+    """SOON with no uptick is a vig sit. LIVE first print is still ok."""
+    if bool(row.get("live")):
+        return False
+    return delta is None or delta <= 0
+
+
 def why_not(row: dict) -> str | None:
     """Why rank() is None. None means it would buy."""
     slug = row.get("slug") or ""
@@ -99,6 +107,8 @@ def why_not(row: dict) -> str | None:
     delta = _f(row.get("delta_c"))
     if delta is not None and delta < 0:
         return "dump"
+    if soon_unticked(row, delta):
+        return "soon_flat"
     delta2 = _f(row.get("delta2_c"))
     if delta2 is not None and delta2 <= BOUNCE_PRIOR_C and (delta or 0) > 0:
         return "bounce"
@@ -106,7 +116,7 @@ def why_not(row: dict) -> str | None:
 
 
 def rank(row: dict) -> float | None:
-    """LIVE or SOON aec- with an exit-able book. Reject dumps and bounce-backs."""
+    """LIVE or ticking SOON aec- with an exit-able book. Reject dumps and bounce-backs."""
     slug = row.get("slug") or ""
     if not slug.startswith(TWO_WAY_PREFIX):
         return None
@@ -125,6 +135,8 @@ def rank(row: dict) -> float | None:
         return None
     delta = _f(row.get("delta_c"))
     if delta is not None and delta < 0:
+        return None
+    if soon_unticked(row, delta):
         return None
     delta2 = _f(row.get("delta2_c"))
     if delta2 is not None and delta2 <= BOUNCE_PRIOR_C and (delta or 0) > 0:

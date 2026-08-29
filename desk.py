@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 """v16 terminal supervisor. Zero LLM. Code in this repo; state in ~/.grok/desk.
 
-  python3 desk.py              # research + seller; buys paused until you type go
-  python3 desk.py --go         # start buys immediately
+  python3 desk.py --go         # research + seller + buys (use after a version bump)
+  python3 desk.py              # buys HOLD until you type go
   python3 desk.py --no-buy     # research + seller only
   python3 desk.py --paper      # no live orders
 
@@ -245,8 +245,8 @@ def print_help() -> None:
         "commands: help status hold go reload skip <slug> books quit\n"
         "hold = pause new buys (seller stays up)\n"
         "go = resume buys\n"
-        "reload = restart children after you edit this repo\n"
-        "quit = stop everything",
+        "reload = restart children after you edit this repo (HOLD/go stays as-is)\n"
+        "quit = stop everything. Next start: python3 desk.py --go  if you want buys",
         flush=True,
     )
 
@@ -350,6 +350,8 @@ class Supervisor:
             ch.start()
         event("supervisor", "reload", version=risk.VERSION, rev=paths.code_rev(), max_open=risk.MAX_OPEN)
         # session.json kept — same GO, same −$2 circuit
+        if held():
+            print("reload done. buys still HOLD — type go", flush=True)
 
     def handle(self, parsed) -> bool:
         """Return False to quit."""

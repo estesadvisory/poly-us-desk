@@ -1,6 +1,6 @@
-# Desk v18 — architecture
+# Desk v19 — architecture
 
-**Live version: v18.** One Terminal: `python3 desk.py`. Zero LLM in the loop.
+**Live version: v19.** One Terminal: `python3 desk.py --go`. Zero LLM in the loop.
 
 ## What we kept / dropped
 
@@ -25,11 +25,11 @@ orders.lock         →  one buy or cut at a time
 
 Code is the git repo. State is `~/.grok/desk`. After an edit: `reload` or `quit` + run again.
 
-## Policy (v18)
+## Policy (v19)
 
 - $10 ring. Working = the rest. Clip $2. Ticket cap is working cash, not 2.
-- All operational US leagues. LIVE or SOON (≤45m) `aec-`. Overdue NS kept live 90m.
-- 12–88¢ so we can exit. First print allowed. `delta_c < 0` rejected. Bounce (prior ≤ −2¢) rejected.
+- All operational US leagues. LIVE or ticking SOON (≤45m) `aec-`. Overdue NS kept live 90m.
+- 12–88¢ so we can exit. LIVE first print allowed. SOON needs `delta_c > 0`. `delta_c < 0` rejected. Bounce (prior ≤ −2¢) rejected.
 - Rank: tight book + lower taker fee + small uptick bonus.
 - Stop −3¢. Trail arm +5¢, give back 3¢, never EXIT_UP at/under entry. No scratch at +1–2¢.
 - Per-slug 15m after a losing cut. Session −$2 circuit from this GO.

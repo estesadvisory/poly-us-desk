@@ -1,4 +1,4 @@
-# poly-us-desk (v18)
+# poly-us-desk (v19)
 
 Polymarket **US** micro desk. Private. **No secrets in this repo.**
 
@@ -10,12 +10,12 @@ Secrets: 1Password EstesDevOps login `polymarket-us` → `~/.grok/secrets/polyma
 ```bash
 cd ~/repos/poly-us-desk
 test -f ~/.grok/secrets/polymarket-us.env || { echo "NO ENV"; exit 1; }
-python3 desk.py          # research + seller; buys HOLD until you type go
+python3 desk.py --go     # arm buys (use this after a version bump)
 ```
 
 Commands in that same terminal: `help` `status` `hold` `go` `reload` `skip <slug>` `books` `quit`
 
-- `--go` — arm buys on start
+- `--go` — arm buys on start (required after quit + pull, or you sit on HOLD)
 - `--no-buy` — seller + research only (leftover tickets)
 - `--paper` — no live orders
 
@@ -30,5 +30,5 @@ Logs for later check-in: `~/.grok/desk/logs/` (`desk.log`, `events.jsonl`, `rese
 - `loop.py` — only **buyer**
 - `watch.py` — only **seller**
 
-`$10` never trades. Clip $2. Working cash is the ticket cap. LIVE or SOON `aec-` 2-way, all operational US leagues.
+`$10` never trades. Clip $2. Working cash is the ticket cap. LIVE or ticking SOON `aec-` 2-way, all operational US leagues.
 Entry: not dumping. Exit: stop −3¢, trail +5¢. No 3-ways. No 2-ticket freeze.
