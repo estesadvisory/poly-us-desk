@@ -149,6 +149,9 @@ def skipped(slug):
 
 
 def buy(e, slug, usd):
+    if paths.HOLD.exists():
+        print(json.dumps({"ok": False, "stage": "operator_hold", "slug": slug}))
+        return
     if paths.PAPER:
         print(json.dumps({"ok": True, "stage": "paper", "cmd": "buy", "slug": slug, "usd": usd}))
         return

@@ -44,12 +44,8 @@ def live_dogs(tape: dict) -> bool:
 
 def main():
     desklock.claim("loop")
-    sess = DESK / "session.json"
-    if sess.exists():
-        try:
-            sess.unlink()
-        except Exception:
-            pass
+    # session.json is the −$2 circuit. Supervisor wipes it on a fresh desk.py
+    # boot only — reload must not reset the day.
     print(json.dumps({"ok": True, "role": "loop", "version": risk.VERSION, "pid": os.getpid()}), flush=True)
     while True:
         out, err = "", ""

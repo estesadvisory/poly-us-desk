@@ -249,8 +249,43 @@ class Supervisor:
         if not self.no_buy:
             self.children["loop"] = Child("loop", [exe, str(paths.REPO / "loop.py")], self.env)
 
+    def _stop_pidfile(self, name: str) -> None:
+        pidf = paths.DESK / f"{name}.pid"
+        if not pidf.exists():
+            return
+        try:
+            old = int(pidf.read_text().strip() or "0")
+        except ValueError:
+            old = 0
+        if old and old != os.getpid() and _alive(old):
+            event("supervisor", "reap_stale", child=name, pid=old)
+            try:
+                os.killpg(old, 15)
+            except Exception:
+                try:
+                    os.kill(old, 15)
+                except Exception:
+                    pass
+            time.sleep(0.3)
+            if _alive(old):
+                try:
+                    os.kill(old, 9)
+                except Exception:
+                    pass
+        try:
+            pidf.unlink()
+        except Exception:
+            pass
+
     def start_all(self) -> None:
         paths.ensure_desk()
+        for name in ROLES:
+            self._stop_pidfile(name)
+        sess = paths.DESK / "session.json"
+        try:
+            sess.unlink()
+        except Exception:
+            pass
         (paths.DESK / "supervisor.pid").write_text(str(os.getpid()) + "\n")
         event("supervisor", "boot", version=risk.VERSION, paper=self.paper, no_buy=self.no_buy, hold=held())
         for ch in self.children.values():
@@ -284,6 +319,7 @@ class Supervisor:
         for ch in self.children.values():
             ch.start()
         event("supervisor", "reload")
+        # session.json kept — same GO, same −$2 circuit
 
     def handle(self, parsed) -> bool:
         """Return False to quit."""
