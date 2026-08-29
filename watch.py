@@ -115,9 +115,14 @@ def main():
     e = env()
     last_cut = {}
     peak = load_peak()
+    last_hb = 0.0
     while True:
         try:
             pos = signed("GET", "/v1/portfolio/positions", e).get("positions") or {}
+            now_hb = time.time()
+            if now_hb - last_hb >= 30:
+                print(json.dumps({"ok": True, "role": "watch", "open": len(pos)}), flush=True)
+                last_hb = now_hb
             for gone in [s for s in list(peak) if s not in pos]:
                 peak.pop(gone, None)
             later, live_set = tape_sets()
@@ -139,7 +144,8 @@ def main():
                         last_cut[slug] = now
                         peak.pop(slug, None)
                     continue
-                is_live = True if live_set is None else slug in live_set
+                # Missing from tape ≠ later. Only LATER list is TTR. Else trail as live.
+                is_live = True if live_set is None else (slug in live_set or (later is not None and slug not in later))
                 side = risk.watch_exit(avg, bid, peak[slug], is_live)
                 if side:
                     print(f"{side} {slug} bid={bid} avg={avg} peak={peak[slug]} live={is_live}", flush=True)

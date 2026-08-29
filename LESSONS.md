@@ -1,4 +1,4 @@
-# Venue lessons 2026-08-28 → 08-29 — live policy **v12**
+# Venue lessons 2026-08-28 → 08-29 — live policy **v13**
 
 Source: `GET /v1/portfolio/activities` (cost already includes taker fee). Not Chrome cash, not memory.
 
@@ -36,7 +36,7 @@ Winners are **live names that already moved a dime**, not 1¢ scalps. AZ 5.7¢ i
 
 US sports `feeCoefficient` 0.06. Taker fee/share ≈ `0.06 × p × (1−p)` ≈ **1.5¢/side at 50¢**, ~3¢ round-trip. A +1¢ / −1¢ scalp on a $2–$5 clip cannot have positive EV. Stop −1¢ and reap +2¢ were both inside the fee.
 
-Live policy is **v12**. Below is how we got there (superseded).
+Live policy is **v13**. Below is how we got there (superseded).
 
 ## v7 (superseded)
 
@@ -63,7 +63,11 @@ One loop (buyer), one watch (seller), one CoS TUI. Order lock. Session $2 circui
 
 Dogs **18–42¢ only** (no fav band). Loop **never sells**. `nohup` in GO.md. Watch owns every exit.
 
-## v12 (live policy)
+## v12 (superseded)
 
-Two **last-trade** prints, not bid-only. Event must have a **score**. 0–0 in Q1 is not a buy. Print within 1¢ of bid. Cut at bid on a 1¢ book.
+Two **last-trade** prints + last≈bid + required score. Afternoon GO **zero fills** — last-trades are too sparse. That was the starve.
+
+## v13 (live policy)
+
+Back to **bid ticks** (v11 fire path). One **+2¢ bid** uptick. Reject bounce (prior tick ≤ −2¢). Spread ≤ 2¢. Keep 18–42, no 3-way, no 0–0 Q1. Hot BBO of live slugs every 8s.
 

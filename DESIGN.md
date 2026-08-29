@@ -1,24 +1,33 @@
-# Desk v12 — architecture
+# Desk v13 — architecture
 
-**Live version: v12.** Start only from a fresh TUI pasting `GO.md`.
+**Live version: v15.** Start from a fresh TUI pasting `GO.md`.
 
-## Roles
+## What broke
+
+v11 **bid-tick** rank fired 13 programmatic buys on 2026-08-29 (wrong *names*, but the machine traded).
+v12 (PR #4) switched momentum to **two last-trade prints** and required last≈bid. Last-trades are sparse; the afternoon GO HOLDed every cycle. That is the waste.
+
+## Roles (unchanged)
 
 ```
 one CoS TUI  →  reports / nohup pids / never orders
-loop.py      →  ONLY BUYER   (loop.pid, refuses a second)
-watch.py     →  ONLY SELLER  (watch.pid, refuses a second)
+loop.py      →  ONLY BUYER   (loop.pid)
+watch.py     →  ONLY SELLER  (watch.pid, 4s on open tickets)
 orders.lock  →  one buy or cut at a time
 ```
 
-Intent/hum never CUT. Watch owns stop, trail, and LATER TTR.
+## Market watch (efficient)
 
-## Policy
+```
+research.py           full scan ~20s   all operational US leagues + ATP/WTA → live/soon first, ≤100 BBO
+research.py --hot     8s               re-BBO live/soon slugs only (no league crawl)
+intent.py             picks BUY        uses --hot if tape <25s old
+loop.py               cadence          8s while any live 18–42¢ exists, else 20s
+watch.py              exits            GET positions + BBO *open* slugs every 4s
+```
 
-LIVE 2-way dogs **18–42¢**, two **last-trade** upticks, score on the board (no 0–0 in Q1), last print within 1¢ of bid, OI ≥ 5k, depth ≥ 5. No favs. Stop −3¢. Trail +5¢. Cut at bid when the book is 1¢ wide. Session halt $2 from GO equity. $10 never trades. $2 × max 2.
+Universe scan is cheap enough; the hot path is what catches the +2¢ bid tick.
 
-HOLD on an empty qualified tape is success.
+## Policy (v13)
 
-## Struck
-
-Parallel agent traders. LLM scanner. Loop selling. Fav 58–72¢. Hard reap. Pregame sit. Chicago-day −$6.38 as a halt on a new GO.
+Mike’s rules: all US sports, two $2 tickets, reap (+5¢ trail), cut (−3¢), fast micros. `$10` ring. LIVE `aec-` with a 12–88¢ book (exit-able). No 18–42, no momentum tick, no 0–0 religion.

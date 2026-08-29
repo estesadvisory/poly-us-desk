@@ -1,36 +1,31 @@
 #!/usr/bin/env python3
-"""Venue-agnostic risk. Polymarket US is the first adapter, not the policy.
+"""Desk v15. Mike's rules only: live 2-way micros, max 2, $10 ring, reap/stop.
 
-Desk version v12 (see ~/.grok/desk/VERSION).
-Loop buys; watch sells. LIVE dogs 18–42¢ with two *prints* (last trade), a real score, bid on the print.
+Not a dog-band religion. 12–88¢ is so there is a book to exit, not 18–42 theory.
 """
 from __future__ import annotations
 
-VERSION = "v12"
+VERSION = "v15"
 RING_USD = 10.0
 CLIP_USD = 2.0
 MAX_USD = 2.0
 MAX_OPEN = 2
-SOON_MIN = 20  # TTR for leftovers only; we do not buy SOON
-ASK_DOG = (0.18, 0.42)
-MAX_SPREAD_LIVE = 0.01
+SOON_MIN = 20
+# Tradable two-way: dust (<12¢) and locks (>88¢) cannot be micro-reaped.
+ASK_TRADE = (0.12, 0.88)
+MAX_SPREAD_LIVE = 0.04
 HARD_STOP = 0.03
 TRAIL_ARM = 0.05
 TRAIL_GIVEBACK = 0.03
-IDLE_SCAN_SEC = 30
-OPEN_SCAN_SEC = 8
+IDLE_SCAN_SEC = 10
+OPEN_SCAN_SEC = 5
 TAPE_STALE_SEC = 90
+HOT_MAX_AGE_SEC = 20
 TWO_WAY_PREFIX = "aec-"
 BAN_PREFIX = "atc-"
 FEE_COEF = 0.06
-MIN_DELTA_DOG = 2.0
-MIN_DELTA2 = 1.0  # prior tick also up — two prints, not one bounce
-MAX_CHASE_CENTS = 8.0  # last 30s already ran; we are late
-MIN_OI = 5000.0
-MIN_BID_DEPTH = 5
-BUY_COOLDOWN_SEC = 900  # after a *losing* cut only
+BUY_COOLDOWN_SEC = 0
 MAX_DAY_LOSS = 2.0
-LATE_PERIOD = ("5th", "6th", "7th", "8th", "9th", "Q4", "4Q", "2H")
 
 
 def taker_fee_per_share(p: float) -> float:
@@ -61,71 +56,37 @@ def _f(x):
         return None
 
 
-def is_late(period) -> bool:
-    p = period or ""
-    pu = p.upper()
-    return any(m in p for m in LATE_PERIOD) or "Q4" in pu or "4Q" in pu
-
-
-def score_ok(score, period) -> bool:
-    """US live events publish score. 0-0 in Q1/1st is not a cover; 0-0 in the 6th can be baseball."""
-    if not score or not isinstance(score, str) or "-" not in score.replace("–", "-"):
-        return False
-    try:
-        a, b = score.replace("–", "-").split("-", 1)
-        a, b = int(a.strip()), int(b.strip())
-    except Exception:
-        return False
-    if a == 0 and b == 0:
-        p = period or ""
-        if any(x in p for x in ("Q1", "1st", "NS", "1H", "Top 1st", "Bot 1st")):
-            return False
-    return True
+def in_dog_band(ask: float) -> bool:
+    """Name kept for loop hot-cadence. Means tradable 12–88, not 18–42."""
+    lo, hi = ASK_TRADE
+    return lo <= float(ask or 0) <= hi
 
 
 def rank(row: dict) -> float | None:
-    """None = do not buy. LIVE dog 18–42¢, two last-trade upticks, score on the board, print at the bid."""
+    """LIVE aec- with a book we can exit. No score/tick/OI/dog-band gates."""
     slug = row.get("slug") or ""
     if not slug.startswith(TWO_WAY_PREFIX):
         return None
     if not bool(row.get("live")):
         return None
-    if not score_ok(row.get("score"), row.get("period")):
-        return None
     ask = float(row.get("ask") or 0)
     bid = _f(row.get("bid"))
-    last = _f(row.get("last"))
     spr = row.get("spr")
+    if spr is None and bid and ask:
+        spr = round(ask - bid, 4)
+    if not ask or bid is None:
+        return None
     if spr is None or spr > MAX_SPREAD_LIVE:
         return None
-    if last is None or bid is None or round(abs(last - bid), 4) > 0.01:
+    if not in_dog_band(ask):
         return None
-    oi = _f(row.get("oi"))
-    if oi is not None and oi < MIN_OI:
-        return None
-    depth = _f(row.get("bid_depth"))
-    if depth is not None and depth < MIN_BID_DEPTH:
-        return None
-    delta = _f(row.get("last_delta_c"))
-    delta2 = _f(row.get("last_delta2_c"))
-    if delta is None or delta2 is None:
-        return None
-    if delta2 < MIN_DELTA2:
-        return None
-    if delta > MAX_CHASE_CENTS:
-        return None
-    lo_d, hi_d = ASK_DOG
-    if not (lo_d <= ask <= hi_d):
-        return None
-    if delta < MIN_DELTA_DOG:
-        return None
-    if is_late(row.get("period")) and ask < 0.35 and delta < 4:
-        return None
-    return 50.0 + delta + delta2 + (hi_d - ask) * 20.0
+    # Prefer tighter book, more mid-price (faster round-trip).
+    mid = abs(0.5 - ask)
+    return 100.0 - spr * 200.0 - mid * 40.0
 
 
 def watch_exit(avg: float, bid: float, peak: float, live: bool) -> str | None:
-    """Hard stop always. LIVE: trail after +5¢, give back 3¢ from peak. No hard reap."""
+    """Mitigate −3¢. Reap: trail after +5¢, give back 3¢ from peak."""
     if not (avg and bid):
         return None
     if bid <= avg - HARD_STOP:

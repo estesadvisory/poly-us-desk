@@ -246,7 +246,17 @@ def _cut(e, slug):
     if ok:
         skip_add(slug)
         if avg and bid and bid < avg:
-            (Path.home() / ".grok/desk/last_cut").write_text(str(int(time.time())))
+            p = Path.home() / ".grok/desk/last_cut"
+            rec = {}
+            if p.exists():
+                try:
+                    rec = json.loads(p.read_text())
+                    if not isinstance(rec, dict):
+                        rec = {}
+                except Exception:
+                    rec = {}
+            rec[slug] = int(time.time())
+            p.write_text(json.dumps(rec) + "\n")
 
 
 def main():

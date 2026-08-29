@@ -34,8 +34,24 @@ def books():
     return json.loads(line[-1])
 
 
+def tape_full_age_sec() -> float:
+    if not TAPE.exists():
+        return 1e9
+    try:
+        t = json.loads(TAPE.read_text())
+        asof = t.get("full_asof") or t.get("asof") or ""
+        ts = datetime.fromisoformat(asof.replace("Z", "+00:00"))
+        return (datetime.now(timezone.utc) - ts).total_seconds()
+    except Exception:
+        return 1e9
+
+
 def refresh_tape():
-    subprocess.run(["python3", str(DESK / "research.py")], capture_output=True, text=True, timeout=40)
+    age = tape_full_age_sec()
+    args = [str(DESK / "research.py")]
+    if 0 <= age < risk.HOT_MAX_AGE_SEC:
+        args.append("--hot")
+    subprocess.run(["python3", *args], capture_output=True, text=True, timeout=60)
 
 
 def pick_buy(tape, ban, open_slugs):
@@ -52,14 +68,31 @@ def pick_buy(tape, ban, open_slugs):
     return scored[0] if scored else None
 
 
-def cooling() -> bool:
+def cooling_slugs() -> set:
+    """Per-slug 15m after a losing cut. Never freeze the whole desk (max 2 concurrent)."""
     if not LAST_CUT.exists():
-        return False
+        return set()
+    raw = LAST_CUT.read_text().strip()
+    now = time.time()
+    out = set()
     try:
-        age = time.time() - float(LAST_CUT.read_text().strip())
+        d = json.loads(raw)
+        if isinstance(d, dict):
+            for s, ts in d.items():
+                try:
+                    if now - float(ts) < risk.BUY_COOLDOWN_SEC:
+                        out.add(s)
+                except (TypeError, ValueError):
+                    continue
+            return out
     except Exception:
-        return False
-    return age < risk.BUY_COOLDOWN_SEC
+        pass
+    try:
+        if now - float(raw) < risk.BUY_COOLDOWN_SEC:
+            return {"*legacy*"}
+    except Exception:
+        return set()
+    return set()
 
 
 def ensure_session(bp: float) -> dict:
@@ -86,7 +119,11 @@ def session_halt(bp: float, opens) -> bool:
     start = float(rec.get("start_bp") or bp)
     marked = sum(float(o.get("mark") or o.get("cost") or 0) for o in (opens or []))
     equity = bp + marked
-    return (start - equity) >= float(rec.get("max_loss") or risk.MAX_DAY_LOSS)
+    gap = start - equity
+    # In-flight fill: BP already down ~$2, position not in books yet. Not a day loss.
+    if not opens and risk.CLIP_USD * 0.7 <= gap <= risk.CLIP_USD + 0.6:
+        return False
+    return gap >= float(rec.get("max_loss") or risk.MAX_DAY_LOSS)
 
 
 def dump(out):
@@ -119,15 +156,14 @@ def main():
     if session_halt(bp, opens):
         dump({"action": "HOLD", "reason": "session loss circuit", "buyingPower": bp, "working": working})
         return
-    if cooling():
-        dump({"action": "HOLD", "reason": "15m cooldown after losing cut", "working": working})
-        return
-    pick = pick_buy(tape, skips(), {o["slug"] for o in opens})
+    cool = cooling_slugs()
+    ban = skips() | {s for s in cool if s != "*legacy*"}
+    pick = pick_buy(tape, ban, {o["slug"] for o in opens})
     if not pick:
         dump(
             {
                 "action": "HOLD",
-                "reason": "no live name with momentum outside the fee-trap",
+                "reason": f"open={len(opens)}/{MAX_OPEN} no live 2-way book",
                 "working": working,
                 "open": [o.get("slug") for o in opens],
                 "live_n": len(tape.get("live") or []),
