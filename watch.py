@@ -116,6 +116,7 @@ def main():
     e = env()
     last_cut = {}
     peak = load_peak()
+    last_bid: dict[str, float] = {}
     last_hb = 0.0
     pos = {}
     while True:
@@ -127,6 +128,7 @@ def main():
                 last_hb = now_hb
             for gone in [s for s in list(peak) if s not in pos]:
                 peak.pop(gone, None)
+                last_bid.pop(gone, None)
             later, live_set = tape_sets()
             for slug, p in pos.items():
                 avg = px(p.get("costPerShare"))
@@ -148,7 +150,8 @@ def main():
                     continue
                 # Missing from tape ≠ later. Pregame later is hold. Else trail as live.
                 is_live = True if live_set is None else (slug in live_set or later_row is None)
-                side = risk.watch_exit(avg, bid, peak[slug], is_live)
+                side = risk.watch_exit(avg, bid, peak[slug], is_live, last_bid.get(slug))
+                last_bid[slug] = bid
                 if side:
                     print(f"{side} {slug} bid={bid} avg={avg} peak={peak[slug]} live={is_live}", flush=True)
                     if cut_now(slug):

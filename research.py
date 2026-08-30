@@ -20,7 +20,6 @@ BBO_CAP = 100
 LIVE_KEEP = 24
 SOON_KEEP = 12
 SOON_MIN = risk.SOON_MIN  # capital may sit this long; not 90
-SKIP = paths.DESK / "skip_slugs.txt"
 OUT = paths.DESK / "tape.md"
 OUTJ = paths.DESK / "tape.json"
 QUOTES = paths.DESK / "quotes.json"
@@ -41,12 +40,6 @@ def px(x):
         return float((x or {}).get("value") or 0)
     except Exception:
         return 0.0
-
-
-def skips():
-    if not SKIP.exists():
-        return set()
-    return {ln.strip() for ln in SKIP.read_text().splitlines() if ln.strip() and not ln.startswith("#")}
 
 
 def bbo(slug):
@@ -131,7 +124,6 @@ def picks(markets):
 def main():
     paths.ensure_desk()
     now = datetime.now(timezone.utc)
-    ban = skips()
     live, soon_l, nxt, reject = [], [], [], []
     slugs = []
     meta = {}
@@ -157,8 +149,6 @@ def main():
             if not horizon:
                 continue
             for kind, s in picks(e.get("markets")):
-                if s in ban:
-                    continue
                 slugs.append(s)
                 meta[s] = {
                     "lg": lg,
@@ -313,10 +303,16 @@ def hot():
     with concurrent.futures.ThreadPoolExecutor(max_workers=12) as ex:
         quotes = list(ex.map(bbo, slugs))
     live, soon_l, nxt, reject, now_q = [], [], [], [], {}
-    ban = skips()
     for q in quotes:
         s = q.get("slug")
-        if q.get("error") or s not in meta or s in ban:
+        if s not in meta:
+            continue
+        if q.get("error"):
+            row = dict(meta[s])
+            if row.get("live"):
+                live.append(row)
+            elif row.get("soon"):
+                soon_l.append(row)
             continue
         m = dict(meta[s])
         ask, bid, spr = q.get("ask") or 0, q.get("bid") or 0, q.get("spr")
@@ -372,9 +368,10 @@ def hot():
     merged = prev
     merged.update(now_q)
     QUOTES.write_text(json.dumps(merged, indent=2) + "\n")
+    later_rows = payload["later"]
     lines = [
         f"# tape {now.strftime('%Y-%m-%d %H:%M')}Z hot",
-        f"live {len(live)} soon {len(soon_l)} scanned {len(slugs)}",
+        f"live {len(live)} soon {len(soon_l)} later {len(later_rows)} scanned {len(slugs)}",
         "",
         "## LIVE",
     ]
@@ -384,6 +381,14 @@ def hot():
             f"rank {r.get('rank')} d {r.get('delta_c')}/{r.get('delta2_c')} bid {r.get('bid')} "
             f"last {r.get('last')} ask {r.get('ask')} | {r.get('title')}"
         )
+    lines += ["", f"## SOON ≤{SOON_MIN}m"]
+    for r in soon_l[:SOON_KEEP]:
+        lines.append(
+            f"- {r['slug']} in {r.get('minutes_to_start')}m bid {r.get('bid')} ask {r.get('ask')} | {r.get('title')}"
+        )
+    lines += ["", "## LATER"]
+    for r in later_rows[:4]:
+        lines.append(f"- {r.get('slug')} in {r.get('minutes_to_start')}m | {r.get('title')}")
     OUT.write_text("\n".join(lines) + "\n")
     print(OUT.read_text())
 
