@@ -224,9 +224,18 @@ def hud() -> str:
     nxt = intent.get("next")
     nxt_m = intent.get("next_min")
     why = intent.get("why") or []
+    tape_lgs = sorted(
+        {
+            r.get("lg") or risk.league(r.get("slug") or "")
+            for r in list(tape.get("live") or []) + list(tape.get("soon") or [])
+            if r.get("slug")
+        }
+    )
+    cold = intent.get("cold") or []
     lines = [
         f"{risk.VERSION}  {paths.code_rev()}  {now_iso()}  {'HOLD' if held() else 'BUYING'}  paper={paths.PAPER}  max_open={risk.MAX_OPEN}",
         f"BP {bp}  work {work}  ring {risk.RING_USD}  open {len(opens)}/{risk.MAX_OPEN}  live {live_n} soon {soon_n} later {later_n}",
+        f"tape {','.join(tape_lgs) or '-'}  cold {','.join(cold) or '-'}",
         f"last {action}  {reason}",
     ]
     if nxt:

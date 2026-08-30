@@ -14,6 +14,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import paths
+import risk
 import trade
 
 DESK = paths.DESK
@@ -149,6 +150,14 @@ def main():
     ]
     for t in sorted(today_closed, key=lambda x: x["pnl"]):
         lines.append(f"- {t['slug']} {t['buy_px']}→{t['sell_px']} **{t['pnl']:+.2f}** fees {t['fees']}")
+    by_lg: dict[str, float] = {}
+    for t in today_closed:
+        lg = risk.league(t["slug"]) or "?"
+        by_lg[lg] = round(by_lg.get(lg, 0.0) + float(t["pnl"]), 4)
+    if by_lg:
+        lines += ["", "## by league"]
+        for lg, pnl in sorted(by_lg.items(), key=lambda x: x[1]):
+            lines.append(f"- {lg} **{pnl:+.2f}**")
     LEDGER.write_text("\n".join(lines) + "\n")
     if BOOKS.exists():
         try:

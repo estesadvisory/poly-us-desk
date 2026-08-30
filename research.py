@@ -93,17 +93,17 @@ def fetch_league(lg):
 
 
 def event_flags(ended: bool, api_live, mins: float, period: str) -> tuple[bool, bool]:
-    """(live, soon). Ended never buys. Overdue NS stays live for OVERDUE_LIVE_MIN."""
+    """(live, soon). Ended never buys. In-game period or api_live counts; leftover NS does not."""
     if ended:
         return False, False
     if api_live is True:
         live_g = True
-    elif mins < 0 and mins > -risk.OVERDUE_LIVE_MIN:
+    elif (period or "").strip() not in ("", "NS"):
         live_g = True
-    elif api_live is False:
-        live_g = False
+    elif mins < 0 and mins > -risk.OVERDUE_LIVE_MIN and api_live is not False:
+        live_g = True
     else:
-        live_g = (period or "").strip() not in ("", "NS")
+        live_g = False
     soon_g = (not live_g) and (-SOON_MIN <= mins <= SOON_MIN)
     return live_g, soon_g
 
@@ -174,6 +174,7 @@ def main():
                 }
     ordered = []
     seen_s = set()
+    per_lg: dict[str, int] = {}
     for want_live, want_soon in ((True, False), (False, True), (False, False)):
         for s in slugs:
             if s in seen_s:
@@ -185,6 +186,10 @@ def main():
                 continue
             if not want_live and not want_soon and (m.get("live") or m.get("soon")):
                 continue
+            lg = m.get("lg") or risk.league(s)
+            if per_lg.get(lg, 0) >= risk.BBO_PER_LEAGUE:
+                continue
+            per_lg[lg] = per_lg.get(lg, 0) + 1
             seen_s.add(s)
             ordered.append(s)
     slugs = ordered[:BBO_CAP]
