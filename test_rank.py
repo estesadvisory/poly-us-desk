@@ -21,7 +21,7 @@ def row(**kw):
 
 
 def main():
-    assert risk.VERSION == "v20"
+    assert risk.VERSION == "v21"
     assert risk.MAX_OPEN >= 10
     assert risk.RING_USD == 10.0
     assert risk.rank(row()) is not None, "flat first-ish print must fire"
@@ -94,11 +94,13 @@ def main():
     mid = risk.rank(row(ask=0.50, bid=0.495, spr=0.005, delta_c=1.0))
     assert dog is not None and mid is not None
     assert dog > mid, "lower-fee dog should outrank 50c coin-flip"
-    assert risk.watch_exit(0.50, 0.47, 0.50, True) == "EXIT_DOWN"
+    assert risk.watch_exit(0.50, 0.47, 0.50, True) is None, "3c wiggle is hold"
+    assert risk.watch_exit(0.50, 0.40, 0.50, True) == "EXIT_DOWN", "10c hole"
+    assert risk.watch_exit(0.50, 0.42, 0.50, True, prev_bid=0.50) == "EXIT_DOWN", "8c cliff"
     assert risk.watch_exit(0.50, 0.52, 0.52, True) is None, "do not scratch +2c"
     assert risk.watch_exit(0.50, 0.53, 0.56, True) == "EXIT_UP"
     assert risk.watch_exit(0.53, 0.51, 0.60, True) is None, "trail must not sell through entry"
-    assert risk.watch_exit(0.53, 0.50, 0.60, True) == "EXIT_DOWN"
+    assert risk.watch_exit(0.53, 0.50, 0.60, True) is None, "3c from entry is not a crash"
     assert risk.should_ttr(50) is False
     assert risk.should_ttr(-5) is True
     print("ok", risk.VERSION)

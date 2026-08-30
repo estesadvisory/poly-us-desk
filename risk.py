@@ -9,7 +9,7 @@ the stop. Rank prefers a tight book and a lower taker fee — not the
 """
 from __future__ import annotations
 
-VERSION = "v20"
+VERSION = "v21"
 RING_USD = 10.0
 CLIP_USD = 2.0
 MAX_USD = 2.0
@@ -24,7 +24,8 @@ OVERDUE_LIVE_MIN = 90
 # Tradable two-way: dust (<12¢) and locks (>88¢) cannot be micro-reaped.
 ASK_TRADE = (0.12, 0.88)
 MAX_SPREAD_LIVE = 0.04
-HARD_STOP = 0.03
+HARD_STOP = 0.10  # 3¢ wiggle is hold; a dime hole is a crash
+FAST_CRASH = 0.08  # one watch print (MIA 53→13)
 TRAIL_ARM = 0.05
 TRAIL_GIVEBACK = 0.03
 IDLE_SCAN_SEC = 10
@@ -180,15 +181,20 @@ def should_ttr(minutes_to_start) -> bool:
         return True
 
 
-def watch_exit(avg: float, bid: float, peak: float, live: bool) -> str | None:
-    """Cut losers at −3¢. Trail winners after +5¢; give back 3¢ from peak.
+def watch_exit(avg: float, bid: float, peak: float, live: bool, prev_bid=None) -> str | None:
+    """Hold a 3¢ wiggle. Cut a −10¢ hole or an −8¢ one-print cliff. Trail +5/−3.
 
-    Never EXIT_UP at or below entry — that sold today's "winners" as fee losses.
-    Stop still owns the loser. Same entries.
+    Never EXIT_UP at or below entry.
     """
     if not (avg and bid):
         return None
     if bid <= avg - HARD_STOP:
+        return "EXIT_DOWN"
+    try:
+        prev = float(prev_bid) if prev_bid is not None else None
+    except (TypeError, ValueError):
+        prev = None
+    if prev is not None and bid <= prev - FAST_CRASH:
         return "EXIT_DOWN"
     if not live:
         return None
