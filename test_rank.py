@@ -21,7 +21,7 @@ def row(**kw):
 
 
 def main():
-    assert risk.VERSION == "v19"
+    assert risk.VERSION == "v20"
     assert risk.MAX_OPEN >= 10
     assert risk.RING_USD == 10.0
     assert risk.rank(row()) is not None, "flat first-ish print must fire"
@@ -46,7 +46,41 @@ def main():
     assert research.event_flags(True, False, 10, "NS") == (False, False)
     assert research.event_flags(True, False, -10, "NS") == (False, False)
     assert research.event_flags(False, False, 30, "NS") == (False, True)
-    assert research.event_flags(False, False, -36, "NS") == (True, False)
+    assert research.event_flags(False, False, -36, "NS") == (False, True)
+    assert research.event_flags(False, False, -36, "Q1") == (True, False)
+    assert risk.league("aec-cs2-mak-unn-2026-08-29") == "cs2"
+    assert risk.cold_leagues_from_trips(
+        [
+            {"slug": "aec-cs2-a-2026-08-29", "closed": True, "day": "2026-08-29", "pnl": -0.2},
+            {"slug": "aec-cs2-b-2026-08-29", "closed": True, "day": "2026-08-29", "pnl": -0.2},
+            {"slug": "aec-mlb-kc-cle-2026-08-29", "closed": True, "day": "2026-08-29", "pnl": 2.5},
+            {"slug": "aec-mlb-tex-mil-2026-08-29", "closed": True, "day": "2026-08-29", "pnl": -0.3},
+        ],
+        "2026-08-29",
+    ) == {"cs2"}
+    import intent
+
+    tape = {
+        "live": [
+            {
+                "slug": "aec-cs2-aaa-2026-08-29",
+                "live": True,
+                "ask": 0.40,
+                "bid": 0.39,
+                "spr": 0.01,
+                "delta_c": 1.0,
+            },
+            {
+                "slug": "aec-cs2-bbb-2026-08-29",
+                "live": True,
+                "ask": 0.35,
+                "bid": 0.34,
+                "spr": 0.01,
+                "delta_c": 1.0,
+            },
+        ]
+    }
+    assert intent.pick_buy(tape, set(), {"aec-cs2-aaa-2026-08-29"}) is None
     assert risk.rank(row(ask=0.37, bid=0.365, delta_c=1.0)) is not None, "37c uptick"
     assert risk.rank(row(ask=0.85, bid=0.84, spr=0.01)) is not None, "85c still tradable"
     assert risk.rank(row(slug="atc-epl-tot-new-tot")) is None, "3-way"
