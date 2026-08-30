@@ -57,9 +57,8 @@ def refresh_tape():
     subprocess.run(["python3", str(paths.REPO / "research.py")], capture_output=True, text=True, timeout=60)
 
 
-def pick_buy(tape, ban, open_slugs, cold=None):
+def pick_buy(tape, ban, open_slugs):
     scored = []
-    cold = set(cold or [])
     open_leagues = {risk.league(s) for s in open_slugs if risk.league(s)}
     rows = list(tape.get("live") or []) + list(tape.get("soon") or [])
     for r in rows:
@@ -67,7 +66,7 @@ def pick_buy(tape, ban, open_slugs, cold=None):
         lg = risk.league(s)
         if not s or s in ban or s in open_slugs:
             continue
-        if lg in cold or lg in open_leagues:
+        if lg in open_leagues:
             continue
         sc = risk.rank(r)
         if sc is None:
@@ -75,23 +74,6 @@ def pick_buy(tape, ban, open_slugs, cold=None):
         scored.append((sc, r))
     scored.sort(key=lambda x: -x[0])
     return scored[0] if scored else None
-
-
-def chicago_day() -> str:
-    from zoneinfo import ZoneInfo
-
-    return datetime.now(ZoneInfo("America/Chicago")).strftime("%Y-%m-%d")
-
-
-def cold_leagues() -> set[str]:
-    p = DESK / "fills.json"
-    if not p.exists():
-        return set()
-    try:
-        payload = json.loads(p.read_text())
-    except Exception:
-        return set()
-    return risk.cold_leagues_from_trips(payload.get("trips") or [], chicago_day())
 
 
 def cooling_slugs() -> set:
@@ -208,9 +190,8 @@ def main():
     cool = cooling_slugs()
     ban = skips() | {s for s in cool if s != "*legacy*"}
     open_slugs = {o["slug"] for o in opens}
-    cold = cold_leagues()
     open_leagues = {risk.league(s) for s in open_slugs if risk.league(s)}
-    pick = pick_buy(tape, ban, open_slugs, cold)
+    pick = pick_buy(tape, ban, open_slugs)
     if not pick:
         later = list(tape.get("later") or [])
         live_rows = list(tape.get("live") or [])
@@ -220,9 +201,7 @@ def main():
         for r in unused + later[:6]:
             s = r.get("slug") or "?"
             lg = risk.league(s)
-            if lg in cold:
-                why.append(f"{s[:36]}:league_cold")
-            elif lg in open_leagues:
+            if lg in open_leagues:
                 why.append(f"{s[:36]}:league_open")
             else:
                 w = risk.why_not(r)
@@ -249,7 +228,6 @@ def main():
                 "next": nxt.get("title"),
                 "next_min": nxt.get("minutes_to_start"),
                 "why": why[:8],
-                "cold": sorted(cold),
                 "version": risk.VERSION,
             }
         )
@@ -267,7 +245,6 @@ def main():
             "minutes_to_start": row.get("minutes_to_start"),
             "reason": f"{row.get('title')} ask {row.get('ask')} spr {row.get('spr')} d {row.get('delta_c')} score {sc:.2f}",
             "report": f"CoS BUY {row['slug']} ${TICKET} ask {row.get('ask')} score {sc:.1f}",
-            "cold": sorted(cold),
             "version": risk.VERSION,
         }
     )

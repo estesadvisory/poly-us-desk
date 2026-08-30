@@ -231,11 +231,10 @@ def hud() -> str:
             if r.get("slug")
         }
     )
-    cold = intent.get("cold") or []
     lines = [
         f"{risk.VERSION}  {paths.code_rev()}  {now_iso()}  {'HOLD' if held() else 'BUYING'}  paper={paths.PAPER}  max_open={risk.MAX_OPEN}",
         f"BP {bp}  work {work}  ring {risk.RING_USD}  open {len(opens)}/{risk.MAX_OPEN}  live {live_n} soon {soon_n} later {later_n}",
-        f"tape {','.join(tape_lgs) or '-'}  cold {','.join(cold) or '-'}",
+        f"tape {','.join(tape_lgs) or '-'}",
         f"last {action}  {reason}",
     ]
     if nxt:

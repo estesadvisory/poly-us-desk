@@ -9,7 +9,7 @@ the stop. Rank prefers a tight book and a lower taker fee — not the
 """
 from __future__ import annotations
 
-VERSION = "v21"
+VERSION = "v22"
 RING_USD = 10.0
 CLIP_USD = 2.0
 MAX_USD = 2.0
@@ -17,7 +17,6 @@ MAX_USD = 2.0
 MAX_OPEN = 20
 MAX_OPEN_PER_LEAGUE = 1  # no 3× identical CS2 clips
 BBO_PER_LEAGUE = 8
-COLD_LOSS_N = 2
 SOON_MIN = 45  # buy the next hour, not only the next 20m
 # Posted start passed + API still NS: keep as live this long (CHI-TEN hole).
 OVERDUE_LIVE_MIN = 90
@@ -71,23 +70,6 @@ def _f(x):
 def league(slug: str) -> str:
     parts = (slug or "").split("-")
     return parts[1] if len(parts) > 2 else ""
-
-
-def cold_leagues_from_trips(trips, day: str) -> set[str]:
-    """≥2 closed losses today and no win → sit that league out (resets next day)."""
-    loss: dict[str, int] = {}
-    win: dict[str, int] = {}
-    for t in trips or []:
-        if not t.get("closed") or t.get("day") != day or t.get("pnl") is None:
-            continue
-        lg = league(t.get("slug") or "")
-        if not lg:
-            continue
-        if t["pnl"] < 0:
-            loss[lg] = loss.get(lg, 0) + 1
-        elif t["pnl"] > 0:
-            win[lg] = win.get(lg, 0) + 1
-    return {lg for lg, n in loss.items() if n >= COLD_LOSS_N and win.get(lg, 0) == 0}
 
 
 def in_dog_band(ask: float) -> bool:
