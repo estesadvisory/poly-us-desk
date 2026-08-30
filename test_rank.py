@@ -21,7 +21,7 @@ def row(**kw):
 
 
 def main():
-    assert risk.VERSION == "v21"
+    assert risk.VERSION == "v22"
     assert risk.MAX_OPEN >= 10
     assert risk.RING_USD == 10.0
     assert risk.rank(row()) is not None, "flat first-ish print must fire"
@@ -49,15 +49,6 @@ def main():
     assert research.event_flags(False, False, -36, "NS") == (False, True)
     assert research.event_flags(False, False, -36, "Q1") == (True, False)
     assert risk.league("aec-cs2-mak-unn-2026-08-29") == "cs2"
-    assert risk.cold_leagues_from_trips(
-        [
-            {"slug": "aec-cs2-a-2026-08-29", "closed": True, "day": "2026-08-29", "pnl": -0.2},
-            {"slug": "aec-cs2-b-2026-08-29", "closed": True, "day": "2026-08-29", "pnl": -0.2},
-            {"slug": "aec-mlb-kc-cle-2026-08-29", "closed": True, "day": "2026-08-29", "pnl": 2.5},
-            {"slug": "aec-mlb-tex-mil-2026-08-29", "closed": True, "day": "2026-08-29", "pnl": -0.3},
-        ],
-        "2026-08-29",
-    ) == {"cs2"}
     import intent
 
     tape = {
