@@ -45,8 +45,10 @@ def main():
     assert risk.why_not(later) == "later"
     assert risk.why_not(row(ask=0.99, bid=0.98)) == "band"
     assert risk.why_not(row(delta_c=-1.0)) == "dump"
-    assert risk.why_not(row(period="NS", delta_c=1.0)) == "not_started"
-    assert risk.rank(row(period="NS", delta_c=1.0)) is None
+    assert risk.why_not(row(period="NS", delta_c=1.0, minutes_to_start=-36)) == "not_started"
+    assert risk.rank(row(period="NS", delta_c=1.0, minutes_to_start=-36)) is None
+    assert risk.rank(row(live=False, soon=True, period="NS", minutes_to_start=-10, ask=0.41, bid=0.40, delta_c=1.0)) is None
+    assert risk.rank(row(live=False, soon=True, period="NS", minutes_to_start=20, ask=0.41, bid=0.40, delta_c=1.0)) is not None
     overdue = row(live=True, soon=False, minutes_to_start=-36, ask=0.41, bid=0.40, period="Q1", delta_c=1.0)
     assert risk.rank(overdue) is not None, "overdue in-game must fire"
     assert research.event_flags(True, False, 10, "NS") == (False, False)

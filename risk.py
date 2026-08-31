@@ -94,10 +94,14 @@ def is_actionable(row: dict) -> bool:
 
 
 def leftover_ns(row: dict) -> bool:
-    """API still NS — not in-game, even if overdue flagged live. Blank period is ok (hot BBO)."""
-    if not bool(row.get("live")):
+    """Kickoff passed and API still NS — not in-game. Pregame SOON (NS, m>0) can still tick."""
+    if (row.get("period") or "").strip() != "NS":
         return False
-    return (row.get("period") or "").strip() == "NS"
+    try:
+        m = float(row.get("minutes_to_start"))
+    except (TypeError, ValueError):
+        return bool(row.get("live"))
+    return m < 0
 
 
 def unticked(delta) -> bool:
