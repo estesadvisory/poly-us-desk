@@ -1,15 +1,15 @@
 #!/usr/bin/env python3
-"""Desk v23. $7 ring, all US sports, fire without starving, trail winners.
+"""Desk v24. $7 ring, all US sports, fire without starving, trail winners.
 
-Not a dog-band religion. 20–88¢ is so there is a book to exit — 12–16¢
-LIVE wrecks were the 2026-08-30 hole. Dumping bids are rejected; a LIVE
-first print (no delta yet) is allowed so new games still trade. SOON needs
-a bid uptick. Rank prefers a playable 25–70¢ book with an uptick — not the
-fee-min 12¢ edge or the 50¢ coin-flip.
+Not a dog-band religion. 20–88¢ is so there is a book to exit.
+Dumping bids are rejected. LIVE leftover NS is not a buy. LIVE and SOON
+both need a bid uptick — a flat first print was the 08-31 bleed. Rank
+prefers a playable 25–70¢ book with an uptick. Trail arms at +8¢ so a
+winner can clear taker fees; never sell through entry.
 """
 from __future__ import annotations
 
-VERSION = "v23"
+VERSION = "v24"
 RING_USD = 7.0
 CLIP_USD = 2.0
 MAX_USD = 2.0
@@ -24,7 +24,7 @@ ASK_TRADE = (0.20, 0.88)
 MAX_SPREAD_LIVE = 0.04
 HARD_STOP = 0.10  # 3¢ wiggle is hold; a dime hole is a crash
 FAST_CRASH = 0.08  # one watch print (MIA 53→13)
-TRAIL_ARM = 0.05
+TRAIL_ARM = 0.08  # +5¢ was a fee scratch (08-31 54→60)
 TRAIL_GIVEBACK = 0.03
 IDLE_SCAN_SEC = 10
 OPEN_SCAN_SEC = 5
@@ -93,10 +93,19 @@ def is_actionable(row: dict) -> bool:
     return bucket(False, row.get("minutes_to_start")) == "SOON"
 
 
-def soon_unticked(row: dict, delta) -> bool:
-    """SOON with no uptick is a vig sit. LIVE first print is still ok."""
-    if bool(row.get("live")):
+def leftover_ns(row: dict) -> bool:
+    """Kickoff passed and API still NS — not in-game. Pregame SOON (NS, m>0) can still tick."""
+    if (row.get("period") or "").strip() != "NS":
         return False
+    try:
+        m = float(row.get("minutes_to_start"))
+    except (TypeError, ValueError):
+        return bool(row.get("live"))
+    return m < 0
+
+
+def unticked(delta) -> bool:
+    """No bid uptick. A flat snapshot has no edge after spread + fee."""
     return delta is None or delta <= 0
 
 
@@ -118,11 +127,13 @@ def why_not(row: dict) -> str | None:
         return "wide"
     if not in_dog_band(ask):
         return "band"
+    if leftover_ns(row):
+        return "not_started"
     delta = _f(row.get("delta_c"))
     if delta is not None and delta < 0:
         return "dump"
-    if soon_unticked(row, delta):
-        return "soon_flat"
+    if unticked(delta):
+        return "flat"
     delta2 = _f(row.get("delta2_c"))
     if delta2 is not None and delta2 <= BOUNCE_PRIOR_C and (delta or 0) > 0:
         return "bounce"
@@ -147,10 +158,12 @@ def rank(row: dict) -> float | None:
         return None
     if not in_dog_band(ask):
         return None
+    if leftover_ns(row):
+        return None
     delta = _f(row.get("delta_c"))
     if delta is not None and delta < 0:
         return None
-    if soon_unticked(row, delta):
+    if unticked(delta):
         return None
     delta2 = _f(row.get("delta2_c"))
     if delta2 is not None and delta2 <= BOUNCE_PRIOR_C and (delta or 0) > 0:
@@ -177,7 +190,7 @@ def should_ttr(minutes_to_start) -> bool:
 
 
 def watch_exit(avg: float, bid: float, peak: float, live: bool, prev_bid=None) -> str | None:
-    """Hold a 3¢ wiggle. Cut a −10¢ hole or an −8¢ one-print cliff. Trail +5/−3.
+    """Hold a 3¢ wiggle. Cut a −10¢ hole or an −8¢ one-print cliff. Trail +8/−3.
 
     Never EXIT_UP at or below entry.
     """
