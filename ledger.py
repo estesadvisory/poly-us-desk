@@ -129,7 +129,7 @@ def main():
     payload = {
         "asof": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "buyingPower": bp,
-        "working": round(bp - 10, 4),
+        "working": round(bp - trade.RING, 4),
         "open": open_slugs,
         "day": today,
         "day_closed_n": len(today_closed),

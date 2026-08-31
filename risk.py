@@ -1,27 +1,26 @@
 #!/usr/bin/env python3
-"""Desk v16. $10 ring, all US sports, fire without starving, trail winners.
+"""Desk v23. $7 ring, all US sports, fire without starving, trail winners.
 
-Not a dog-band religion. 12–88¢ is so there is a book to exit.
-Dumping bids are rejected; a LIVE first print (no delta yet) is allowed so new
-games still trade. SOON needs a bid uptick — quiet pregame books faded into
-the stop. Rank prefers a tight book and a lower taker fee — not the
-50¢ coin-flip that ate 2026-08-29.
+Not a dog-band religion. 20–88¢ is so there is a book to exit — 12–16¢
+LIVE wrecks were the 2026-08-30 hole. Dumping bids are rejected; a LIVE
+first print (no delta yet) is allowed so new games still trade. SOON needs
+a bid uptick. Rank prefers a playable 25–70¢ book with an uptick — not the
+fee-min 12¢ edge or the 50¢ coin-flip.
 """
 from __future__ import annotations
 
-VERSION = "v22"
-RING_USD = 10.0
+VERSION = "v23"
+RING_USD = 7.0
 CLIP_USD = 2.0
 MAX_USD = 2.0
 # Working cash is the real cap ($2 clips). Do not sit on idle BP.
 MAX_OPEN = 20
-MAX_OPEN_PER_LEAGUE = 1  # no 3× identical CS2 clips
 BBO_PER_LEAGUE = 8
 SOON_MIN = 45  # buy the next hour, not only the next 20m
 # Posted start passed + API still NS: keep as live this long (CHI-TEN hole).
 OVERDUE_LIVE_MIN = 90
-# Tradable two-way: dust (<12¢) and locks (>88¢) cannot be micro-reaped.
-ASK_TRADE = (0.12, 0.88)
+# Tradable two-way: sub-20¢ wrecks and locks (>88¢) cannot be micro-reaped.
+ASK_TRADE = (0.20, 0.88)
 MAX_SPREAD_LIVE = 0.04
 HARD_STOP = 0.10  # 3¢ wiggle is hold; a dime hole is a crash
 FAST_CRASH = 0.08  # one watch print (MIA 53→13)
@@ -35,8 +34,9 @@ TWO_WAY_PREFIX = "aec-"
 BAN_PREFIX = "atc-"
 FEE_COEF = 0.06
 BUY_COOLDOWN_SEC = 15 * 60
-MAX_DAY_LOSS = 2.0
+MAX_DAY_LOSS = 5.0
 BOUNCE_PRIOR_C = -2.0
+PLAYABLE = (0.25, 0.70)
 
 
 def taker_fee_per_share(p: float) -> float:
@@ -73,9 +73,15 @@ def league(slug: str) -> str:
 
 
 def in_dog_band(ask: float) -> bool:
-    """Name kept for loop hot-cadence. Means tradable 12–88, not 18–42."""
+    """Name kept for loop hot-cadence. Means tradable 20–88, not 18–42."""
     lo, hi = ASK_TRADE
     return lo <= float(ask or 0) <= hi
+
+
+def playable_bonus(ask: float) -> float:
+    """25–70¢ movers paid on 08-30. Flat cheap edges did not."""
+    lo, hi = PLAYABLE
+    return 6.0 if lo <= float(ask or 0) <= hi else 0.0
 
 
 def is_actionable(row: dict) -> bool:
@@ -152,7 +158,14 @@ def rank(row: dict) -> float | None:
     fee = taker_fee_per_share(ask)
     tick = 0.0 if delta is None else max(delta, 0.0)
     live_bonus = 5.0 if bool(row.get("live")) else 0.0
-    return 100.0 - spr * 200.0 - fee * 800.0 + min(tick, 3.0) * 2.0 + live_bonus
+    return (
+        100.0
+        - spr * 200.0
+        - fee * 800.0
+        + min(tick, 3.0) * 3.0
+        + playable_bonus(ask)
+        + live_bonus
+    )
 
 
 def should_ttr(minutes_to_start) -> bool:

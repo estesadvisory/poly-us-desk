@@ -59,14 +59,10 @@ def refresh_tape():
 
 def pick_buy(tape, ban, open_slugs):
     scored = []
-    open_leagues = {risk.league(s) for s in open_slugs if risk.league(s)}
     rows = list(tape.get("live") or []) + list(tape.get("soon") or [])
     for r in rows:
         s = r.get("slug") or ""
-        lg = risk.league(s)
         if not s or s in ban or s in open_slugs:
-            continue
-        if lg in open_leagues:
             continue
         sc = risk.rank(r)
         if sc is None:
@@ -185,12 +181,23 @@ def main():
         return
     bp = float(b.get("buyingPower") or 0)
     if session_halt(bp, opens):
-        dump({"action": "HOLD", "reason": "session loss circuit", "buyingPower": bp, "working": working})
+        rec = ensure_session(bp)
+        start = float(rec.get("start_bp") or bp)
+        marked = sum(float(o.get("mark") or o.get("cost") or 0) for o in opens)
+        gap = start - (bp + marked)
+        cap = float(rec.get("max_loss") or risk.MAX_DAY_LOSS)
+        dump(
+            {
+                "action": "HOLD",
+                "reason": f"session loss circuit −${gap:.2f} / ${cap:.0f}",
+                "buyingPower": bp,
+                "working": working,
+            }
+        )
         return
     cool = cooling_slugs()
     ban = skips() | {s for s in cool if s != "*legacy*"}
     open_slugs = {o["slug"] for o in opens}
-    open_leagues = {risk.league(s) for s in open_slugs if risk.league(s)}
     pick = pick_buy(tape, ban, open_slugs)
     if not pick:
         later = list(tape.get("later") or [])
@@ -200,15 +207,11 @@ def main():
         why = []
         for r in unused + later[:6]:
             s = r.get("slug") or "?"
-            lg = risk.league(s)
-            if lg in open_leagues:
-                why.append(f"{s[:36]}:league_open")
-            else:
-                w = risk.why_not(r)
-                if w:
-                    why.append(f"{s[:36]}:{w}")
-                elif s in ban:
-                    why.append(f"{s[:36]}:skip_or_cool")
+            w = risk.why_not(r)
+            if w:
+                why.append(f"{s[:36]}:{w}")
+            elif s in ban:
+                why.append(f"{s[:36]}:skip_or_cool")
         nxt = later[0] if later else {}
         if unused:
             reason = f"open={len(opens)}/{MAX_OPEN} unused {len(unused)} rejected"

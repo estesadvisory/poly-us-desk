@@ -21,9 +21,10 @@ def row(**kw):
 
 
 def main():
-    assert risk.VERSION == "v22"
+    assert risk.VERSION == "v23"
     assert risk.MAX_OPEN >= 10
-    assert risk.RING_USD == 10.0
+    assert risk.RING_USD == 7.0
+    assert risk.MAX_DAY_LOSS == 5.0
     assert risk.rank(row()) is not None, "flat first-ish print must fire"
     assert risk.rank(row(delta_c=None)) is not None, "no history still fires"
     soon_flat = row(live=False, soon=True, minutes_to_start=10, ask=0.53, bid=0.52, delta_c=0.0)
@@ -71,9 +72,16 @@ def main():
             },
         ]
     }
-    assert intent.pick_buy(tape, set(), {"aec-cs2-aaa-2026-08-29"}) is None
+    picked = intent.pick_buy(tape, set(), {"aec-cs2-aaa-2026-08-29"})
+    assert picked is not None and picked[1]["slug"] == "aec-cs2-bbb-2026-08-29"
+    assert intent.pick_buy(tape, set(), {"aec-cs2-aaa-2026-08-29", "aec-cs2-bbb-2026-08-29"}) is None
+    assert risk.why_not(row(ask=0.14, bid=0.13)) == "band", "12-16c wrecks are out"
     assert risk.rank(row(ask=0.37, bid=0.365, delta_c=1.0)) is not None, "37c uptick"
     assert risk.rank(row(ask=0.85, bid=0.84, spr=0.01)) is not None, "85c still tradable"
+    cheap = risk.rank(row(ask=0.20, bid=0.195, spr=0.005, delta_c=0.0))
+    mover = risk.rank(row(ask=0.38, bid=0.375, spr=0.005, delta_c=2.0))
+    assert cheap is not None and mover is not None
+    assert mover > cheap, "ticking 38c should beat a flat 20c edge"
     assert risk.rank(row(slug="atc-epl-tot-new-tot")) is None, "3-way"
     assert risk.rank(row(live=False)) is None, "not live"
     assert risk.rank(row(ask=0.03, bid=0.025)) is None, "dust"
