@@ -1,6 +1,6 @@
-# Desk v23 — architecture
+# Desk v24 — architecture
 
-**Live version: v23.** One Terminal: `python3 desk.py --go`. Zero LLM in the loop.
+**Live version: v24.** One Terminal: `python3 desk.py --go`. Zero LLM in the loop.
 
 ## What we kept / dropped
 
@@ -25,11 +25,11 @@ orders.lock         →  one buy or cut at a time
 
 Code is the git repo. State is `~/.grok/desk`. After an edit: `reload` or `quit` + run again.
 
-## Policy (v23)
+## Policy (v24)
 
 - $7 ring. Working = the rest. Clip $2. Ticket cap is working cash, not a league slot.
-- All operational US leagues. LIVE or ticking SOON (≤45m) `aec-`. NS leftover is not live. Any number of leagues; one ticket per slug. Rank picks the best book.
-- 20–88¢ so we can exit. 12–16¢ wrecks are out. LIVE first print allowed. SOON needs `delta_c > 0`. `delta_c < 0` rejected. Bounce (prior ≤ −2¢) rejected.
+- All operational US leagues. LIVE or ticking SOON (≤45m) `aec-`. Leftover NS is not a buy. Any number of leagues; one ticket per slug. Rank picks the best book.
+- 20–88¢ so we can exit. 12–16¢ wrecks are out. LIVE and SOON need `delta_c > 0`. `delta_c < 0` rejected. Bounce (prior ≤ −2¢) rejected.
 - Rank: tight book + lower taker fee + uptick + 25–70¢ playable bonus.
-- Stop −10¢ from entry, or −8¢ in one watch print. 3¢ wiggle is hold. Trail +5/−3, never EXIT_UP at/under entry. Skip blocks buys, not the tape.
+- Stop −10¢ from entry, or −8¢ in one watch print. 3¢ wiggle is hold. Trail +8/−3, never EXIT_UP at/under entry. Skip blocks buys, not the tape.
 - Per-slug 15m after a losing cut. Session −$5 circuit from this GO (intent HOLD, not the operator HOLD file).
