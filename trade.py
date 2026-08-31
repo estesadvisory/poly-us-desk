@@ -117,7 +117,7 @@ def books(e):
                 "delta_c": round((bid - avg) * 100, 2) if avg and bid else None,
             }
         )
-    out = {"buyingPower": bp, "working": round(bp - 10, 4), "ring": 10, "open": open_, "asof": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+    out = {"buyingPower": bp, "working": round(bp - RING, 4), "ring": RING, "open": open_, "asof": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
     paths.ensure_desk()
     (paths.DESK / "books.json").write_text(json.dumps(out) + "\n")
     print(json.dumps(out))

@@ -7,7 +7,7 @@ You are sitting at a shell. Python trades. You type commands.
 ```bash
 cd ~/repos/poly-us-desk
 test -f ~/.grok/secrets/polymarket-us.env || { echo "NO ENV"; exit 1; }
-test "$(cat VERSION)" = "v22" || { echo "VERSION mismatch"; cat VERSION; exit 1; }
+test "$(cat VERSION)" = "v23" || { echo "VERSION mismatch"; cat VERSION; exit 1; }
 python3 desk.py --go
 ```
 
@@ -54,8 +54,9 @@ Do not edit a running child and expect it to pick up changes without `reload` / 
 ## Book / policy
 
 - `books.json` — `open: []` means flat
-- `$10` never trades. Clip $2. Working = BP − 10 (ticket cap, not a 2-slot freeze).
-- LIVE or ticking SOON (≤45m) `aec-`, all US sports, 12–88¢ book. Max 1 per league. SOON needs a bid uptick.
+- `$7` never trades. Clip $2. Working = BP − 7 (ticket cap, not a league-slot freeze).
+- LIVE or ticking SOON (≤45m) `aec-`, all US sports, 20–88¢ book. Best book wins, any league. SOON needs a bid uptick.
+- Session circuit −$5 from this GO (not operator HOLD). `hold` / missing `--go` is the only operator pause.
 - Stop −10¢ or −8¢ in one print. 3¢ wiggle is hold. Trail +5/−3, never sell a winner at/under entry.
 
 US only. Never print secrets.
