@@ -118,7 +118,9 @@ def main():
     rows = activities(e)
     ts = trips(rows)
     st, pos = trade.signed("GET", "/v1/portfolio/positions", e)
-    open_slugs = list(((pos or {}).get("positions") or {}).keys()) if st == 200 else []
+    positions = ((pos or {}).get("positions") or {}) if st == 200 else {}
+    open_slugs = list(positions.keys())
+    marked = sum(trade.px(p.get("cashValue")) for p in positions.values())
     st, bal = trade.signed("GET", "/v1/account/balances", e)
     bp = 0.0
     if st == 200:
@@ -126,10 +128,13 @@ def main():
     today = datetime.now(CT).strftime("%Y-%m-%d")
     today_closed = [t for t in ts if t.get("closed") and t.get("day") == today and t.get("pnl") is not None]
     day_pnl = round(sum(t["pnl"] for t in today_closed), 4)
+    ring, rec = risk.compute_ring(bp, marked, persist=False)
     payload = {
         "asof": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ"),
         "buyingPower": bp,
-        "working": round(bp - risk.compute_ring(bp, persist=False)[0], 4),
+        "working": round(bp - ring, 4),
+        "ring": ring,
+        "reserved": rec.get("reserved"),
         "open": open_slugs,
         "day": today,
         "day_closed_n": len(today_closed),
