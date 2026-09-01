@@ -1,4 +1,4 @@
-# poly-us-desk (v24)
+# poly-us-desk (v25)
 
 Polymarket **US** micro desk. Private. **No secrets in this repo.**
 
@@ -30,5 +30,6 @@ Logs for later check-in: `~/.grok/desk/logs/` (`desk.log`, `events.jsonl`, `rese
 - `loop.py` — only **buyer**
 - `watch.py` — only **seller**
 
-`$7` never trades. Clip $2. Working cash is the ticket cap. LIVE or ticking SOON `aec-` 2-way, 20–88¢, all operational US leagues.
+`$0` ring floor (see `desk.json`). Clip $2. Working cash is the ticket cap. LIVE or ticking SOON `aec-` 2-way, 20–88¢, all operational US leagues.
 Entry: bid must have ticked up. Not dumping. Exit: stop −10¢ (or −8¢ cliff), trail +8¢. No 3-ways. No league-slot freeze.
+10% of profit above waterline ratchets into cash (`profit_reserve_pct`). Overlay: `~/.grok/desk/desk.json`.

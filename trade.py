@@ -117,7 +117,18 @@ def books(e):
                 "delta_c": round((bid - avg) * 100, 2) if avg and bid else None,
             }
         )
-    out = {"buyingPower": bp, "working": round(bp - RING, 4), "ring": RING, "open": open_, "asof": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime())}
+    marked = sum(float(o.get("mark") or 0) for o in open_)
+    ring, rec = risk.compute_ring(bp, marked, persist=True)
+    out = {
+        "buyingPower": bp,
+        "working": round(bp - ring, 4),
+        "ring": ring,
+        "ring_floor": risk.RING_USD,
+        "reserved": rec.get("reserved"),
+        "waterline": rec.get("waterline"),
+        "open": open_,
+        "asof": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+    }
     paths.ensure_desk()
     (paths.DESK / "books.json").write_text(json.dumps(out) + "\n")
     print(json.dumps(out))
@@ -188,21 +199,23 @@ def _buy(e, slug, usd):
     except Exception as err:
         print(json.dumps({"ok": False, "stage": "tape_error", "error": str(err)[:120]}))
         return
-    if usd < MIN_USD or usd > MAX_USD:
+    if usd < risk.CLIP_USD or usd > risk.MAX_USD:
         print(json.dumps({"ok": False, "stage": "size", "usd": usd}))
         return
     st, bal = signed("GET", "/v1/account/balances", e)
     bp = float(((bal.get("balances") or [{}])[0] if isinstance(bal, dict) else {}).get("buyingPower") or 0)
-    if bp - usd < RING:
-        print(json.dumps({"ok": False, "stage": "ring_fence", "buyingPower": bp, "usd": usd, "ring": RING}))
-        return
     st, pos = signed("GET", "/v1/portfolio/positions", e)
     positions = (pos or {}).get("positions") or {}
+    marked = sum(px(p.get("cashValue")) for p in positions.values())
+    ring, rec = risk.compute_ring(bp, marked, persist=True)
+    if bp - usd < ring:
+        print(json.dumps({"ok": False, "stage": "ring_fence", "buyingPower": bp, "usd": usd, "ring": ring, "reserved": rec.get("reserved")}))
+        return
     if slug in positions:
         print(json.dumps({"ok": False, "stage": "already_in", "slug": slug}))
         return
-    if len(positions) >= MAX_OPEN:
-        print(json.dumps({"ok": False, "stage": "max_open", "n": len(positions), "max": MAX_OPEN}))
+    if len(positions) >= risk.MAX_OPEN:
+        print(json.dumps({"ok": False, "stage": "max_open", "n": len(positions), "max": risk.MAX_OPEN}))
         return
     md = bbo(slug)
     ask, bid = px(md.get("bestAsk")), px(md.get("bestBid"))

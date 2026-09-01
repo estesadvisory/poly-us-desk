@@ -1,6 +1,6 @@
-# Desk v24 — architecture
+# Desk v25 — architecture
 
-**Live version: v24.** One Terminal: `python3 desk.py --go`. Zero LLM in the loop.
+**Live version: v25.** One Terminal: `python3 desk.py --go`. Zero LLM in the loop. Knobs: `desk.json`.
 
 ## What we kept / dropped
 
@@ -25,9 +25,10 @@ orders.lock         →  one buy or cut at a time
 
 Code is the git repo. State is `~/.grok/desk`. After an edit: `reload` or `quit` + run again.
 
-## Policy (v24)
+## Policy (v25)
 
-- $7 ring. Working = the rest. Clip $2. Ticket cap is working cash, not a league slot.
+- Ring floor and clip live in `desk.json` (overlay `~/.grok/desk/desk.json`). Default floor **$0**. Working = BP − effective ring.
+- `profit_reserve_pct` (default 0.10): 10% of equity above a persisted waterline ratchets into park and does not shrink. Cap so one clip of working remains. Survives quit.
 - All operational US leagues. LIVE or ticking SOON (≤45m) `aec-`. Leftover NS is not a buy. Any number of leagues; one ticket per slug. Rank picks the best book.
 - 20–88¢ so we can exit. 12–16¢ wrecks are out. LIVE and SOON need `delta_c > 0`. `delta_c < 0` rejected. Bounce (prior ≤ −2¢) rejected.
 - Rank: tight book + lower taker fee + uptick + 25–70¢ playable bonus.

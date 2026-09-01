@@ -8,7 +8,7 @@ Web UI Grok Projects do **not** sync here. Continuity is: **disk + this file** (
 
 ## What this repo is
 
-Private Polymarket **US** micro desk. Python supervisor + buyer + seller + tape. **Zero LLM in the loop.** Live version is the `VERSION` file (v24 as of onboard).
+Private Polymarket **US** micro desk. Python supervisor + buyer + seller + tape. **Zero LLM in the loop.** Live version is the `VERSION` file (v25 as of onboard). Trading knobs: `desk.json`.
 
 Code is this git repo. Runtime state and logs live under `~/.grok/desk` (override with `POLY_DESK`). Secrets never live here.
 
