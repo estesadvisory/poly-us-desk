@@ -10,7 +10,7 @@ def main():
     assert desk.parse_cmd("hold") == ("hold", None)
     assert desk.parse_cmd("go") == ("go", None)
     assert desk.parse_cmd("reload") == ("reload", None)
-    assert desk.parse_cmd("quit") == ("quit", None)
+    assert desk.parse_cmd("config") == ("config", None)
     assert desk.parse_cmd("skip aec-mlb-mia-wsh-2026-08-29") == (
         "skip",
         "aec-mlb-mia-wsh-2026-08-29",

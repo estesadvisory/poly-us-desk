@@ -1,42 +1,142 @@
 #!/usr/bin/env python3
-"""Desk v24. $7 ring, all US sports, fire without starving, trail winners.
+"""Desk v25. Knobs in desk.json. Ring 0 + 10% profit reserve.
 
 Not a dog-band religion. 20–88¢ is so there is a book to exit.
 Dumping bids are rejected. LIVE leftover NS is not a buy. LIVE and SOON
-both need a bid uptick — a flat first print was the 08-31 bleed. Rank
-prefers a playable 25–70¢ book with an uptick. Trail arms at +8¢ so a
-winner can clear taker fees; never sell through entry.
+both need a bid uptick. Rank prefers a playable 25–70¢ book with an uptick.
+Trail arms at +8¢ so a winner can clear taker fees; never sell through entry.
 """
 from __future__ import annotations
+import json
+from datetime import datetime, timezone
 
-VERSION = "v24"
-RING_USD = 7.0
+import cfg
+import paths
+
+VERSION = "v25"
+TWO_WAY_PREFIX = "aec-"
+BAN_PREFIX = "atc-"
+RESERVE_FILE = paths.DESK / "reserve.json"
+
+RING_USD = 0.0
+PROFIT_RESERVE_PCT = 0.10
 CLIP_USD = 2.0
 MAX_USD = 2.0
-# Working cash is the real cap ($2 clips). Do not sit on idle BP.
 MAX_OPEN = 20
 BBO_PER_LEAGUE = 8
-SOON_MIN = 45  # buy the next hour, not only the next 20m
-# Posted start passed + API still NS: keep as live this long (CHI-TEN hole).
+SOON_MIN = 45
 OVERDUE_LIVE_MIN = 90
-# Tradable two-way: sub-20¢ wrecks and locks (>88¢) cannot be micro-reaped.
 ASK_TRADE = (0.20, 0.88)
 MAX_SPREAD_LIVE = 0.04
-HARD_STOP = 0.10  # 3¢ wiggle is hold; a dime hole is a crash
-FAST_CRASH = 0.08  # one watch print (MIA 53→13)
-TRAIL_ARM = 0.08  # +5¢ was a fee scratch (08-31 54→60)
+HARD_STOP = 0.10
+FAST_CRASH = 0.08
+TRAIL_ARM = 0.08
 TRAIL_GIVEBACK = 0.03
 IDLE_SCAN_SEC = 10
 OPEN_SCAN_SEC = 5
 TAPE_STALE_SEC = 90
 HOT_MAX_AGE_SEC = 20
-TWO_WAY_PREFIX = "aec-"
-BAN_PREFIX = "atc-"
 FEE_COEF = 0.06
 BUY_COOLDOWN_SEC = 15 * 60
 MAX_DAY_LOSS = 5.0
 BOUNCE_PRIOR_C = -2.0
 PLAYABLE = (0.25, 0.70)
+
+
+def apply_config(data=None) -> dict:
+    """Copy desk.json into module globals. Reload after editing the file."""
+    global RING_USD, PROFIT_RESERVE_PCT, CLIP_USD, MAX_USD, MAX_OPEN, BBO_PER_LEAGUE
+    global SOON_MIN, OVERDUE_LIVE_MIN, ASK_TRADE, MAX_SPREAD_LIVE, HARD_STOP, FAST_CRASH
+    global TRAIL_ARM, TRAIL_GIVEBACK, IDLE_SCAN_SEC, OPEN_SCAN_SEC, TAPE_STALE_SEC
+    global HOT_MAX_AGE_SEC, FEE_COEF, BUY_COOLDOWN_SEC, MAX_DAY_LOSS, BOUNCE_PRIOR_C, PLAYABLE
+    c = data if data is not None else cfg.load()
+    RING_USD = float(c.get("ring_usd", RING_USD))
+    PROFIT_RESERVE_PCT = float(c.get("profit_reserve_pct", PROFIT_RESERVE_PCT))
+    CLIP_USD = float(c.get("clip_usd", CLIP_USD))
+    MAX_USD = CLIP_USD
+    MAX_OPEN = int(c.get("max_open", MAX_OPEN))
+    BBO_PER_LEAGUE = int(c.get("bbo_per_league", BBO_PER_LEAGUE))
+    SOON_MIN = float(c.get("soon_min", SOON_MIN))
+    OVERDUE_LIVE_MIN = float(c.get("overdue_live_min", OVERDUE_LIVE_MIN))
+    ASK_TRADE = (float(c.get("ask_lo", ASK_TRADE[0])), float(c.get("ask_hi", ASK_TRADE[1])))
+    MAX_SPREAD_LIVE = float(c.get("max_spread", MAX_SPREAD_LIVE))
+    HARD_STOP = float(c.get("hard_stop", HARD_STOP))
+    FAST_CRASH = float(c.get("fast_crash", FAST_CRASH))
+    TRAIL_ARM = float(c.get("trail_arm", TRAIL_ARM))
+    TRAIL_GIVEBACK = float(c.get("trail_giveback", TRAIL_GIVEBACK))
+    IDLE_SCAN_SEC = float(c.get("idle_scan_sec", IDLE_SCAN_SEC))
+    OPEN_SCAN_SEC = float(c.get("open_scan_sec", OPEN_SCAN_SEC))
+    TAPE_STALE_SEC = float(c.get("tape_stale_sec", TAPE_STALE_SEC))
+    HOT_MAX_AGE_SEC = float(c.get("hot_max_age_sec", HOT_MAX_AGE_SEC))
+    FEE_COEF = float(c.get("fee_coef", FEE_COEF))
+    BUY_COOLDOWN_SEC = float(c.get("buy_cooldown_sec", BUY_COOLDOWN_SEC))
+    MAX_DAY_LOSS = float(c.get("max_day_loss_usd", MAX_DAY_LOSS))
+    BOUNCE_PRIOR_C = float(c.get("bounce_prior_c", BOUNCE_PRIOR_C))
+    PLAYABLE = (float(c.get("playable_lo", PLAYABLE[0])), float(c.get("playable_hi", PLAYABLE[1])))
+    return c
+
+
+def ring_from_state(ring_usd, pct, waterline, reserved, equity, bp, clip):
+    """Ratchet 10% of profit above waterline. Never shrink. Leave one clip of working."""
+    ring_usd = float(ring_usd or 0)
+    pct = float(pct or 0)
+    waterline = float(waterline)
+    reserved = float(reserved or 0)
+    equity = float(equity or 0)
+    bp = float(bp or 0)
+    clip = float(clip or 0)
+    profit = max(0.0, equity - waterline)
+    reserved = max(reserved, round(profit * pct, 4))
+    if bp < clip:
+        return 0.0, reserved
+    cap = max(0.0, bp - clip)
+    return min(ring_usd + reserved, cap), reserved
+
+
+def _load_reserve() -> dict:
+    if not RESERVE_FILE.exists():
+        return {}
+    try:
+        d = json.loads(RESERVE_FILE.read_text())
+        return d if isinstance(d, dict) else {}
+    except Exception:
+        return {}
+
+
+def _save_reserve(rec: dict) -> None:
+    paths.ensure_desk()
+    rec = dict(rec)
+    rec["updated"] = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+    RESERVE_FILE.write_text(json.dumps(rec) + "\n")
+
+
+def compute_ring(bp: float, marked: float = 0.0, persist: bool = False) -> tuple[float, dict]:
+    """Effective park: ring_usd + ratcheted profit reserve. Overlay/repo knobs already applied."""
+    bp = float(bp or 0)
+    marked = float(marked or 0)
+    equity = bp + marked
+    rec = _load_reserve()
+    if rec.get("waterline") is None:
+        rec["waterline"] = round(equity, 4)
+        rec["reserved"] = 0.0
+    ring, reserved = ring_from_state(
+        RING_USD,
+        PROFIT_RESERVE_PCT,
+        rec["waterline"],
+        rec.get("reserved") or 0,
+        equity,
+        bp,
+        CLIP_USD,
+    )
+    rec["reserved"] = reserved
+    rec["equity"] = round(equity, 4)
+    rec["ring"] = round(ring, 4)
+    if persist:
+        _save_reserve(rec)
+    return ring, rec
+
+
+apply_config()
 
 
 def taker_fee_per_share(p: float) -> float:

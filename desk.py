@@ -6,7 +6,7 @@
   python3 desk.py --no-buy     # research + seller only
   python3 desk.py --paper      # no live orders
 
-Commands (same terminal): help status hold go reload skip <slug> books quit
+Commands (same terminal): help status hold go reload skip <slug> books config quit
 
 Iteration: hold → edit this repo → reload  (or quit, then run again).
 Logs: ~/.grok/desk/logs/desk.log  events.jsonl  research.log  loop.log  watch.log
@@ -17,11 +17,12 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import cfg
 import paths
 import risk
 
 ROLES = ("research", "loop", "watch")
-CMDS = ("help", "status", "hold", "go", "reload", "skip", "books", "quit")
+CMDS = ("help", "status", "hold", "go", "reload", "skip", "books", "config", "quit")
 
 
 def now_iso() -> str:
@@ -233,7 +234,7 @@ def hud() -> str:
     )
     lines = [
         f"{risk.VERSION}  {paths.code_rev()}  {now_iso()}  {'HOLD' if held() else 'BUYING'}  paper={paths.PAPER}  max_open={risk.MAX_OPEN}",
-        f"BP {bp}  work {work}  ring {risk.RING_USD}  open {len(opens)}/{risk.MAX_OPEN}  live {live_n} soon {soon_n} later {later_n}",
+        f"BP {bp}  work {work}  ring {books.get('ring', risk.RING_USD)}  rsv {books.get('reserved') or 0}  open {len(opens)}/{risk.MAX_OPEN}  live {live_n} soon {soon_n} later {later_n}",
         f"tape {','.join(tape_lgs) or '-'}",
         f"last {action}  {reason}",
     ]
@@ -250,10 +251,11 @@ def hud() -> str:
 
 def print_help() -> None:
     print(
-        "commands: help status hold go reload skip <slug> books quit\n"
+        "commands: help status hold go reload skip <slug> books config quit\n"
         "hold = pause new buys (seller stays up)\n"
         "go = resume buys\n"
-        "reload = restart children after you edit this repo (HOLD/go stays as-is)\n"
+        "reload = restart children after you edit this repo or desk.json (HOLD/go stays as-is)\n"
+        "config = print live knobs (desk.json + overlay)\n"
         "quit = stop everything. Next start: python3 desk.py --go  if you want buys",
         flush=True,
     )
@@ -349,6 +351,7 @@ class Supervisor:
                 ch.start()
 
     def reload(self) -> None:
+        risk.apply_config()
         print("reload: stopping children, then starting with this repo", flush=True)
         for ch in self.children.values():
             ch.stop()
@@ -390,6 +393,8 @@ class Supervisor:
                 subprocess.run([py(), str(paths.REPO / "trade.py"), "books"], cwd=str(paths.REPO), env=self.env, timeout=30)
             except Exception as ex:
                 print(f"books failed {type(ex).__name__}", flush=True)
+        elif cmd == "config":
+            print(json.dumps(cfg.load(), indent=2), flush=True)
         elif cmd == "quit":
             return False
         return True

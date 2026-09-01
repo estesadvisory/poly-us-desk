@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """v16 rank. python3 test_rank.py"""
 from __future__ import annotations
+import cfg
 import research
 import risk
 
@@ -21,11 +22,21 @@ def row(**kw):
 
 
 def main():
-    assert risk.VERSION == "v24"
+    risk.apply_config(cfg._read(cfg.REPO_FILE))
+    assert risk.VERSION == "v25"
     assert risk.MAX_OPEN >= 10
-    assert risk.RING_USD == 7.0
+    assert risk.RING_USD == 0.0
+    assert risk.PROFIT_RESERVE_PCT == 0.1
     assert risk.MAX_DAY_LOSS == 5.0
     assert risk.TRAIL_ARM == 0.08
+    r0, rsv0 = risk.ring_from_state(0, 0.10, 10.0, 0.0, 10.0, 10.0, 2.0)
+    assert r0 == 0.0 and rsv0 == 0.0
+    r1, rsv1 = risk.ring_from_state(0, 0.10, 10.0, 0.0, 20.0, 20.0, 2.0)
+    assert rsv1 == 1.0 and r1 == 1.0
+    r2, rsv2 = risk.ring_from_state(0, 0.10, 10.0, 1.5, 12.0, 12.0, 2.0)
+    assert rsv2 == 1.5 and r2 == 1.5, "reserve never shrinks"
+    r3, rsv3 = risk.ring_from_state(0, 0.10, 10.0, 20.0, 30.0, 10.0, 2.0)
+    assert r3 == 8.0 and rsv3 >= 20.0, "leave one clip of working"
     assert risk.rank(row(delta_c=0.0)) is None, "LIVE flat snapshot must wait"
     assert risk.why_not(row(delta_c=0.0)) == "flat"
     assert risk.rank(row(delta_c=None)) is None, "no history must wait"
