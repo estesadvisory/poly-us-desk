@@ -1,6 +1,6 @@
 # Run in **one** Terminal
 
-You are sitting at a shell. Python trades. You type commands.
+You are sitting at a shell. Python trades. You type commands. Grok (or another agent) improves the **repo** on a regular basis — not this process. How we use it: [README.md](README.md#how-we-use-it-grok). Fork or PR: [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Start
 
