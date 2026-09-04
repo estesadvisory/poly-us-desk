@@ -1,42 +1,29 @@
 # Agent instructions (poly-us-desk)
 
-This repository is the **local source of truth** for poly-us-desk work in the Grok CLI.
-Web UI Grok Projects do **not** sync here. Continuity is: **disk + this file** (+ Memory MCP when used).
+This repository is the source of truth for the desk program. Runtime state is **not** in git.
 
-- **Local path:** `~/repos/poly-us-desk`
-- **GitHub:** https://github.com/estesadvisory/poly-us-desk (private)
+- **GitHub:** https://github.com/estesadvisory/poly-us-desk
+- **Local path (typical):** `~/repos/poly-us-desk`
 
 ## What this repo is
 
-Private Polymarket **US** micro desk. Python supervisor + buyer + seller + tape. **Zero LLM in the loop.** Live version is the `VERSION` file (v25 as of onboard). Trading knobs: `desk.json`.
+Polymarket **US** micro desk. Python supervisor + buyer + seller + tape. **Zero LLM in the loop.** Live version is the `VERSION` file. Trading knobs: `desk.json` (plus optional overlay `~/.grok/desk/desk.json`).
 
-Code is this git repo. Runtime state and logs live under `~/.grok/desk` (override with `POLY_DESK`). Secrets never live here.
+Code is this git repo. Runtime state and logs live under `~/.grok/desk` (override with `POLY_DESK`). Secrets never live here. Point `POLY_ENV` at a file that contains `POLYMARKET_KEY_ID` and `POLYMARKET_SECRET_KEY` (see `env.example`).
 
-## Portfolio process (shared)
+## Delivery
 
-Cross-repo standards live in **[estesadvisory/portfolio-ops](https://github.com/estesadvisory/portfolio-ops)** (`docs/PHILOSOPHY.md`, `docs/OPS.md`, `docs/DELIVERY.md`, `docs/ISSUE_FIRST.md`).
-
-1. **Delivery:** multi-step work → issue → **branch → PR → review → merge** (not direct `main`). See `docs/DELIVERY.md`.
-2. **Issue-first:** announce `Tracking: owner/repo#N` (skill `issue-first`).
-3. **Issue bodies** are source of truth; update bodies when closing.
-4. **Priority in titles:** `[P0]`…`[P3]`; park as `[P3 / parked]` with unpark criteria.
-5. **Small PRs**; `Refs #N` / `Fixes #N` on implementing commits.
-6. **After PR:** `/review --pr N` → fix bugs on PR → agent merge (unless `hold` / `wait` / `don't merge`). File issues only for deferred findings.
-7. **Never** embed PATs/tokens in `git remote` URLs — clean HTTPS + `gh auth` keyring (or SSH).
-8. **No silent product breakage** across repos; file issues first for risky changes.
-9. **Session harvest** after meaningful work: short MCP summary — portfolio-ops `docs/SESSION_HARVEST.md`.
+Multi-step work: issue → branch → PR → review → merge (not direct `main`). Announce `Tracking: owner/repo#N`. Priority in titles: `[P0]`…`[P3]`. Implementing commits: `Refs #N` / `Fixes #N`. After PR: review, fix bugs on the same PR, then merge unless the human said `hold` / `wait` / `don't merge`. Never embed PATs in `git remote` URLs.
 
 ## Repo-specific non-negotiables
 
-- **No secrets in git.** Materialize from 1Password EstesDevOps login `polymarket-us` → `~/.grok/secrets/polymarket-us.env`. Do not add a repo `.env.op.tpl` / `secrets-onboard` inject path unless a later ticket says so.
-- Do not commit fills, session JSON, tape dumps, or anything under `~/.grok/desk`.
+- **No secrets in git.** Do not commit `.env`, fills, session JSON, tape dumps, or anything under `~/.grok/desk`.
 - Run in **one Terminal**: `python3 desk.py --go`. Do not `nohup` `loop.py` / `watch.py`. Do not run `hum.py` / `intent.py` / `trade.py buy|cut` by hand.
 - After a version bump: `quit` → `git pull` → `python3 desk.py --go`. Cold start without `--go` sits on HOLD.
 - **Do not invent trading rules.** Live policy: `DESIGN.md` + `desk.json` + `VERSION`. History / never-again: `LESSONS.md` (not live). Idle cash on an empty qualified tape is correct; mid-band scalps are how the fee bill happens.
-- Private product. Do not publish this repo, paste venue keys, or mix this live desk with the paper-only `portfolio-ops/market-run` path.
 - US desk only. Do not open polymarket.com or use a VPN / “not a U.S. person” path from agent work.
+- Do not paste venue keys. Do not mix this live desk with a paper-only market-run path.
 
 ## Useful links
 
-- [README.md](README.md) · [DESIGN.md](DESIGN.md) · [GO.md](GO.md) · [LESSONS.md](LESSONS.md) · [RESTART.md](RESTART.md)
-- Hub onboard: https://github.com/estesadvisory/portfolio-ops/issues/156
+- [README.md](README.md) (humans) · [DESIGN.md](DESIGN.md) · [GO.md](GO.md) · [LESSONS.md](LESSONS.md) · [RESTART.md](RESTART.md) · [SECURITY.md](SECURITY.md)

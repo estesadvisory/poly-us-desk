@@ -21,7 +21,7 @@ SKIP = paths.DESK / "skip_slugs.txt"
 TAPE = paths.DESK / "tape.json"
 RING = risk.RING_USD
 MAX_OPEN = risk.MAX_OPEN
-MIN_USD, MAX_USD = risk.CLIP_USD, risk.MAX_USD
+MIN_USD, MAX_USD = risk.CLIP_MIN_USD, risk.MAX_USD
 
 
 def load_env():
@@ -50,7 +50,7 @@ def signed(method, path, e, body=None):
             "X-PM-Timestamp": ts,
             "X-PM-Signature": sig,
             "Content-Type": "application/json",
-            "User-Agent": "estes-desk/trade",
+            "User-Agent": "poly-us-desk/trade",
         },
     )
     try:
@@ -65,7 +65,7 @@ def signed(method, path, e, body=None):
 
 
 def bbo(slug):
-    req = urllib.request.Request(PUB + f"/v1/markets/{slug}/bbo", headers={"User-Agent": "estes-desk/trade"})
+    req = urllib.request.Request(PUB + f"/v1/markets/{slug}/bbo", headers={"User-Agent": "poly-us-desk/trade"})
     with urllib.request.urlopen(req, timeout=12) as r:
         return json.loads(r.read().decode()).get("marketData") or {}
 
@@ -199,7 +199,7 @@ def _buy(e, slug, usd):
     except Exception as err:
         print(json.dumps({"ok": False, "stage": "tape_error", "error": str(err)[:120]}))
         return
-    if usd < risk.CLIP_USD or usd > risk.MAX_USD:
+    if usd < risk.CLIP_MIN_USD or usd > risk.MAX_USD:
         print(json.dumps({"ok": False, "stage": "size", "usd": usd}))
         return
     st, bal = signed("GET", "/v1/account/balances", e)

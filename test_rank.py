@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""v16 rank. python3 test_rank.py"""
+"""v26 rank. python3 test_rank.py"""
 from __future__ import annotations
 import cfg
 import research
@@ -23,7 +23,12 @@ def row(**kw):
 
 def main():
     risk.apply_config(cfg._read(cfg.REPO_FILE))
-    assert risk.VERSION == "v25"
+    assert risk.VERSION == "v26"
+    assert risk.CLIP_MIN_USD == 1.0
+    assert risk.ticket_usd(1.84) == 1.84
+    assert risk.ticket_usd(5.0) == 2.0
+    assert risk.ticket_usd(0.40) is None
+    assert risk.ASK_TRADE[1] == 0.75
     assert risk.MAX_OPEN >= 10
     assert risk.RING_USD == 0.0
     assert risk.PROFIT_RESERVE_PCT == 0.1
@@ -95,7 +100,8 @@ def main():
     assert intent.pick_buy(tape, set(), {"aec-cs2-aaa-2026-08-29", "aec-cs2-bbb-2026-08-29"}) is None
     assert risk.why_not(row(ask=0.14, bid=0.13)) == "band", "12-16c wrecks are out"
     assert risk.rank(row(ask=0.37, bid=0.365, delta_c=1.0)) is not None, "37c uptick"
-    assert risk.rank(row(ask=0.85, bid=0.84, spr=0.01, delta_c=1.0)) is not None, "85c still tradable"
+    assert risk.why_not(row(ask=0.85, bid=0.84, spr=0.01, delta_c=1.0)) == "band", "80c+ fades are out"
+    assert risk.rank(row(ask=0.74, bid=0.73, spr=0.01, delta_c=1.0)) is not None, "74c still tradable"
     cheap = risk.rank(row(ask=0.20, bid=0.195, spr=0.005, delta_c=1.0))
     mover = risk.rank(row(ask=0.38, bid=0.375, spr=0.005, delta_c=2.0))
     assert cheap is not None and mover is not None

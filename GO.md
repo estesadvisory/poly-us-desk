@@ -1,13 +1,15 @@
-# Run in **one** Terminal. Not Cursor. Not a Grok TUI.
+# Run in **one** Terminal
 
 You are sitting at a shell. Python trades. You type commands.
 
 ## Start
 
 ```bash
-cd ~/repos/poly-us-desk
-test -f ~/.grok/secrets/polymarket-us.env || { echo "NO ENV"; exit 1; }
-test "$(cat VERSION)" = "v25" || { echo "VERSION mismatch"; cat VERSION; exit 1; }
+cd /path/to/poly-us-desk
+# POLY_ENV must point at a file with POLYMARKET_KEY_ID and POLYMARKET_SECRET_KEY
+# (copy env.example). Default path if unset: ~/.grok/secrets/polymarket-us.env
+test -n "${POLY_ENV:-}" -o -f ~/.grok/secrets/polymarket-us.env || { echo "NO ENV"; exit 1; }
+test "$(cat VERSION)" = "v26" || { echo "VERSION mismatch"; cat VERSION; exit 1; }
 python3 desk.py --go
 ```
 
@@ -26,25 +28,27 @@ Do **not** `nohup` `loop.py` / `watch.py` by hand. Do **not** run `hum.py` / `in
 
 | Type | Effect |
 |------|--------|
-| `status` | version, git SHA, BP, working, open, live/soon/later, why |
+| `status` | version, git SHA, BP, working, open, live/soon/later, why (plain language on HOLD) |
 | `hold` | pause new buys (seller stays up) |
 | `go` | resume buys |
 | `reload` | restart children after you edit this repo |
 | `skip <slug>` | never buy that market this session |
 | `books` | refresh venue snapshot |
 | `config` | print live knobs (`desk.json` + overlay) |
+| `set <knob> <value>` | write overlay and reload (example: `set clip_usd 1`) |
+| `reserve reset` | delete the profit-reserve waterline (after a deposit) |
 | `quit` | stop everything (Ctrl-C also) |
 
 ## Edit → halt → restart
 
 1. `hold` (optional, stops new buys immediately)
-2. Edit files in `~/repos/poly-us-desk` (Cursor is fine)
+2. Edit files in this repo
 3. `reload` in the desk terminal — children exec the new code
-4. Or `quit`, then `python3 desk.py` again
+4. Or `quit`, then `python3 desk.py --go` again
 
 Do not edit a running child and expect it to pick up changes without `reload` / `quit`.
 
-## Logs (for a later Cursor check-in)
+## Logs
 
 `~/.grok/desk/logs/`
 
@@ -55,9 +59,9 @@ Do not edit a running child and expect it to pick up changes without `reload` / 
 ## Book / policy
 
 - `books.json` — `open: []` means flat
-- `$0` ring floor (all cash in play). Clip $2. Working = BP − effective ring. 10% of profit above waterline ratchets into park (`profit_reserve_pct` in `desk.json`). Always leave one clip.
-- LIVE or ticking SOON (≤45m) `aec-`, all US sports, 20–88¢ book. Best book wins, any league. LIVE and SOON need a bid uptick. Leftover NS is not a buy.
-- Knobs: repo `desk.json`. Overlay `~/.grok/desk/desk.json` wins on `reload`. Type `config` to print. Delete `~/.grok/desk/reserve.json` after a deposit.
+- `$0` ring floor (all cash in play). Clip $2, min ticket $1. Working = BP − effective ring. 10% of profit above waterline ratchets into park. Always leave one full clip when possible.
+- LIVE or ticking SOON (≤45m) `aec-`, all US sports, 20–75¢ book. Best book wins, any league. LIVE and SOON need a bid uptick. Leftover NS is not a buy.
+- Knobs: repo `desk.json`. Overlay `~/.grok/desk/desk.json` wins on `reload`. Type `set` or `config`. After a deposit: `reserve reset`.
 - Session circuit −$5 from this GO (not operator HOLD). `hold` / missing `--go` is the only operator pause.
 - Stop −10¢ or −8¢ in one print. 3¢ wiggle is hold. Trail +8/−3, never sell a winner at/under entry.
 

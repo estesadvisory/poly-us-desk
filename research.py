@@ -23,7 +23,7 @@ SOON_MIN = risk.SOON_MIN  # capital may sit this long; not 90
 OUT = paths.DESK / "tape.md"
 OUTJ = paths.DESK / "tape.json"
 QUOTES = paths.DESK / "quotes.json"
-UA = {"User-Agent": "estes-desk/research"}
+UA = {"User-Agent": "poly-us-desk/research"}
 
 
 def get(path, params=None, timeout=12):
