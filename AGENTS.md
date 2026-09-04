@@ -32,11 +32,11 @@ Cross-repo standards live in **[estesadvisory/portfolio-ops](https://github.com/
 - Do not commit fills, session JSON, tape dumps, or anything under `~/.grok/desk`.
 - Run in **one Terminal**: `python3 desk.py --go`. Do not `nohup` `loop.py` / `watch.py`. Do not run `hum.py` / `intent.py` / `trade.py buy|cut` by hand.
 - After a version bump: `quit` → `git pull` → `python3 desk.py --go`. Cold start without `--go` sits on HOLD.
-- **Do not invent trading rules.** Policy lives in `DESIGN.md` + `VERSION`. Idle cash on an empty qualified tape is correct; mid-band scalps are how the fee bill happens.
+- **Do not invent trading rules.** Live policy: `DESIGN.md` + `desk.json` + `VERSION`. History / never-again: `LESSONS.md` (not live). Idle cash on an empty qualified tape is correct; mid-band scalps are how the fee bill happens.
 - Private product. Do not publish this repo, paste venue keys, or mix this live desk with the paper-only `portfolio-ops/market-run` path.
 - US desk only. Do not open polymarket.com or use a VPN / “not a U.S. person” path from agent work.
 
 ## Useful links
 
-- [README.md](README.md) · [DESIGN.md](DESIGN.md) · [GO.md](GO.md) · [LESSONS.md](LESSONS.md)
+- [README.md](README.md) · [DESIGN.md](DESIGN.md) · [GO.md](GO.md) · [LESSONS.md](LESSONS.md) · [RESTART.md](RESTART.md)
 - Hub onboard: https://github.com/estesadvisory/portfolio-ops/issues/156

@@ -1,73 +1,76 @@
-# Venue lessons 2026-08-28 → 08-29 — live policy **v16**
+# Lessons — decision log (not live policy)
 
-Source: `GET /v1/portfolio/activities` (cost already includes taker fee). Not Chrome cash, not memory.
+**Live policy is v25.** Read `DESIGN.md` + `desk.json` + `VERSION`. Knobs change without a version bump; this file is *why* we do not go backwards.
 
-## Today (08-29): 13 closed, 13 red, **−$6.37**
+PnL source: `GET /v1/portfolio/activities` (taker fee already in cost). Not Chrome cash, not chat memory. Fills stay under `~/.grok/desk` (never git).
 
-| Slug | Buy | Sell | PnL | Why it died |
-|------|-----|------|-----|-------------|
-| Levante 3-way | 54¢ | 25¢ | **−$3.44** | Washington. Rode a 3-way to the floor. |
-| Spurs 3-way | 43¢ | 38¢ | −$0.54 | 3-way knife, 3 minutes. |
-| Newcastle (other side) | 32¢ | 29¢ | −$0.52 | Flipped the cut match. |
-| Fiorentina 3-way | 33¢ | 31¢ | −$0.42 | Same knife. |
-| BOS–NYY | 49.5¢ | 49¢ | −$0.35 | Coin-flip + **$0.30 fees**. |
-| PIT pregame | 46.5¢ | 46¢ | −$0.23 | 35 min sit, then scratch + $0.20 fees. |
-| LAD | 61¢ | 58¢ | −$0.20 | 61¢ favorite for a 2¢ dream. |
-| DET–IND | 45¢ | 44¢ | −$0.18 | 1¢ + fees. |
-| NCST | 37.5¢ | 37¢ | −$0.17 | Quiet dog, no rip. |
-| SEA–TOR | 49¢ | 48.5¢ | −$0.14 | Mid-band. |
-| CWS–MIN | 49¢ | 49¢ | −$0.12 | **Sold at entry. 100% fees.** |
-| TCU | 63.2¢ | 65.3¢ | −$0.05 | Chrome looked +$0.06. Fees $0.22 ate the 2¢. |
-| Roosevelt CFB | 49¢ | 50.5¢ | −$0.01 | Thin 0.30-lot book. |
+## Never again
 
-CWS is the exhibit: even a scratch is a fee bill. TCU is the exhibit that **+2¢ is not a win** on this venue.
+Do not ship these without a new issue that names the old failure:
 
-## What actually paid (08-28)
+| Do not | Why | When |
+|--------|-----|------|
+| Last-trade + live-score AND-gates | Tape went empty. Afternoon GO: zero fills. | v12 |
+| 18–42¢-only / 12–88 shrink as a starve | Missed live dogs that paid; then bought dying 12–16¢ wrecks. Band is **exit-able**, not a religion. | v11, v23 |
+| 2-ticket cap | Idle cash sat while the tape had books. Working cash is the cap. | v15–v16 |
+| Intent running `research.py --hot` | Overwrote the 52-league crawl with a handful of CS2 slugs. Research child owns the tape. | v20 |
+| Skip-on-cut hiding rows from the tape | Skip blocks **buys**, not listing. | v21 |
+| League/sport **cold** (≥2 losses, 0 wins → sit the sport) | Starved CS2/Valorant/NFL after a bad card. Per-slug skip + 1 ticket/slug is enough. | v20 in, v22 out |
+| LIVE first-print (`delta_c = 0`) | Flat snapshot + taker fee. 08-31 bleed. LIVE and SOON both need an uptick. | v19 in, v24 out |
+| Trail +5/−3 | Net ~+2¢, fees ate it (`54→60 +$0.11` fees `$0.11`). Trail arms at **+8¢**. | v24 |
+| Hard $7 / $10 ring while BP is small | Working $1.74 < $2 clip → HOLD, no trades. Ring floor is **$0**; 10% profit reserve ratchets park. | v23, v25 |
+| 3-ways (`atc-`) | Levante −$3.44. Banned. | 08-29 |
+| `nohup` loop/watch; hand `hum` / `intent` / `trade buy\|cut` | One Terminal: `python3 desk.py --go`. | v16 |
+| Restart after a version bump **without** `--go` | Cold start sits on operator HOLD. Recipe: `quit` → `git pull` → `python3 desk.py --go`. | v19 docs |
+| Inventing a mid-band scalp on an empty qualified tape | Fee bill. Idle cash is correct. | 08-29 |
 
-| Slug | Buy | Sell | PnL |
-|------|-----|------|-----|
-| PHI–LAA | 19.5¢ | 92¢ | **+$10.43** |
-| AZ–SF | 5.7¢ | 34¢ | **+$4.88** |
-| Idaho CFB | 72.6¢ | 75.9¢ | +$0.06 |
+HUD **BUYING** + last action HOLD is usually the **session-loss circuit**, not the operator HOLD file.
 
-Winners are **live names that already moved a dime**, not 1¢ scalps. AZ 5.7¢ is dust — keep the 18¢ floor so we do not revive Washington. PHI 19.5¢ is the prototype.
+## What paid vs what bled
 
-## Math we ignored
+Winners are **live (or ticking SOON) names already moving**, then a trail that can clear fees. Not 1¢ scalps, not flat first prints, not 12–16¢ wrecks.
 
-US sports `feeCoefficient` 0.06. Taker fee/share ≈ `0.06 × p × (1−p)` ≈ **1.5¢/side at 50¢**, ~3¢ round-trip. A +1¢ / −1¢ scalp on a $2–$5 clip cannot have positive EV. Stop −1¢ and reap +2¢ were both inside the fee.
+| Day | Closed | PnL | Note |
+|-----|--------|-----|------|
+| 08-28 | — | PHI–LAA 19.5→92 **+$10.43**; AZ–SF 5.7→34 +$4.88 (dust — do not revive sub-20) | Prototype runner |
+| 08-29 | 36 | **−$10.39** | 3-ways, 50¢ coin-flips, −3¢ stop sold winners (CHI–TEN). Real wins: KC–CLE 18→43 **+$2.57**, Mayo ATP +$0.30 |
+| 08-30 | 24 | **−$5.90** | 12–16¢ LIVE first prints (Vandewinkel 13→3, Keys 12→1). Runner: Kecmanovic 38→73 **+$1.72**, WNBA 70→94 +$0.64 |
+| 08-31 | 15 | **−$6.61** | Flat LIVE snapshots; trail +5 scratched into fees; overdue NS bought; four ATP tickets until working $1. Circuit −$5.94 / $5 |
 
-Live policy is **v16** (`desk.py` in Terminal). Below is how we got there (superseded).
+US taker fee ≈ `0.06 × p × (1−p)` ≈ **1.5¢/side at 50¢**, ~3¢ round-trip. A +1¢/−1¢ scalp cannot have positive EV. CWS 08-29 sold at entry: 100% fees.
 
-## v7 (superseded)
+## Version log (v11 → v25)
 
-- Do not buy 43–57¢. That zone is a fee trap.
-- LIVE 2-way only. No SOON, no 3-way, no other-side.
-- Dogs 18–42¢ need tape **+2¢ already**. Favorites 58–72¢ need **+3¢ confirmation**.
-- Stop −3¢ / trail arm +5¢ give-back 3¢ / reap **+8¢**.
-- 15 minute buy cooldown after a cut. −$2 day circuit from the session mark.
-- Max 2 × $2. $10 never trades.
+| Ver | Issue | Keep | Drop / lesson |
+|-----|-------|------|----------------|
+| v11 | #1 | BBO fire, one buyer / one seller | 18–42-only (later dropped) |
+| v12 | #3 | — | Last-trade + score gates **starved** |
+| v13 | #5 | All US leagues, bid ticks | — |
+| v14 | — | Reject dumping bids | — |
+| v15 | — | 12–88 exit-able | Rank that preferred 50¢ fee-max; 2-ticket freeze |
+| v16 | #7 | Terminal `desk.py`, HUD, HOLD/go | CoS TUI / `nohup` |
+| v17 | #9 | SOON ≤45m, MAX_OPEN=20 | 2-ticket cap |
+| v18 | #11 | Trail never sells through entry; no pregame TTR | — |
+| v19 | #13 | SOON needs `delta_c > 0`; `--go` in docs | LIVE first-print still allowed (later dropped) |
+| v20 | #15 | Intent must not `--hot`; 1 ticket/league | Cold leagues (later dropped) |
+| v21 | #17 | Stop −10¢ / −8¢ cliff; skip ≠ hide; `--hot` keeps rows | −3¢ stop sold winners |
+| v22 | #21 | — | League/sport **cold** flag |
+| v23 | #23 | Park $7 (later $0); no league slot; band **20–88¢**; rank 25–70 playable | 12–16¢ wrecks |
+| v24 | #25 | LIVE **and** SOON need uptick; leftover NS not a buy; trail **+8/−3** | First-print lottery |
+| v25 | #27 | `desk.json` knobs; ring floor **$0**; 10% profit reserve ratchet | Hardcoded $7 ring (working < clip) |
 
-Idle cash on an empty *qualified* tape is still correct. Inventing a mid-band scalp is how we paid the market maker all afternoon.
+## 08-29 morning sample (fee exhibit)
 
-## v8 (superseded)
+13 closed that morning were all red (**−$6.37**), including Levante 3-way **−$3.44** and CWS sold at entry. Kept here so we do not re-learn that a scratch is a fee bill. Full day closed 36 / −$10.39 (ledger).
 
-v7 would have **sold PHI at +8¢**. The paid trades were dimes, so v8 **trails** (arm +5¢, give back 3¢ from peak) and does not hard-reap. One 30s uptick is not a move — need the prior tick up too. 15m cooldown only after a **losing** cut. Skip books with OI < 5,000.
+## Pre-v11 (superseded, one line each)
 
-## v9 (superseded)
+v7–v10: TUI, 18–42 dogs, −3¢ stop, +8¢ reap, `nohup`. PHI would have been sold at +8¢. v8 introduced trail. Do not restore.
 
-## v10 (superseded)
+## How to continue (next session)
 
-One loop (buyer), one watch (seller), one CoS TUI. Order lock. Session $2 circuit. Peak every 4s. TTR only LATER.
-
-## v11 (superseded)
-
-Dogs **18–42¢ only** (no fav band). Loop **never sells**. `nohup` in GO.md. Watch owns every exit.
-
-## v12 (superseded)
-
-Two **last-trade** prints + last≈bid + required score. Afternoon GO **zero fills** — last-trades are too sparse. That was the starve.
-
-## v13 (live policy)
-
-Back to **bid ticks** (v11 fire path). One **+2¢ bid** uptick. Reject bounce (prior tick ≤ −2¢). Spread ≤ 2¢. Keep 18–42, no 3-way, no 0–0 Q1. Hot BBO of live slugs every 8s.
-
+1. `AGENTS.md` → `DESIGN.md` → `desk.json` → `GO.md`
+2. This file only for *why not* to revert
+3. Runtime: `~/.grok/desk` (`ledger.md`, `STATUS.md`, `reserve.json`). After a **deposit**, delete `reserve.json`
+4. Change a knob: edit `desk.json` (or overlay `~/.grok/desk/desk.json`) → `reload`. Version bump only for code/policy, not ring
+5. Multi-step ship: issue → branch → PR → `/review` → merge → `quit` → `git pull` → `python3 desk.py --go`
