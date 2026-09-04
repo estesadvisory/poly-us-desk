@@ -71,8 +71,8 @@ v7–v10: TUI, 18–42 dogs, −3¢ stop, +8¢ reap, `nohup`. PHI would have bee
 
 ## How to continue (next session)
 
-1. `AGENTS.md` → `DESIGN.md` → `desk.json` → `GO.md`. Humans: `README.md` (Grok run loop). Fork / PR: `CONTRIBUTING.md`
+1. `AGENTS.md` → `DESIGN.md` → `desk.json` → `GO.md`. Humans: `README.md` (run + agent-improve loop). Fork / PR: `CONTRIBUTING.md`
 2. This file only for *why not* to revert
 3. Runtime: `~/.grok/desk` (`ledger.md`, `STATUS.md`, `reserve.json`). After a **deposit**, delete `reserve.json`
 4. Change a knob: type `set <knob> <value>` in the desk, or edit `desk.json` / overlay → `reload`. After a deposit: `reserve reset`. Version bump only for code/policy, not ring
-5. Leave the desk running. Grok improves the repo on a regular basis (issue → PR). After merge: `quit` → `git pull` → `python3 desk.py --go`
+5. Leave the desk running. Any AI agent improves the repo on a regular basis (issue → PR). After merge: `quit` → `git pull` → `python3 desk.py --go`
