@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""v16 terminal supervisor. Zero LLM. Code in this repo; state in ~/.grok/desk.
+"""v26 terminal supervisor. Zero LLM. Code in this repo; state in ~/.grok/desk.
 
   python3 desk.py --go         # research + seller + buys (use after a version bump)
   python3 desk.py              # buys HOLD until you type go
   python3 desk.py --no-buy     # research + seller only
   python3 desk.py --paper      # no live orders
 
-Commands (same terminal): help status hold go reload skip <slug> books config quit
+Commands (same terminal): help status hold go reload skip <slug> books config
+  set <knob> <value>  reserve reset  quit
 
 Iteration: hold → edit this repo → reload  (or quit, then run again).
 Logs: ~/.grok/desk/logs/desk.log  events.jsonl  research.log  loop.log  watch.log
@@ -22,7 +23,19 @@ import paths
 import risk
 
 ROLES = ("research", "loop", "watch")
-CMDS = ("help", "status", "hold", "go", "reload", "skip", "books", "config", "quit")
+CMDS = (
+    "help",
+    "status",
+    "hold",
+    "go",
+    "reload",
+    "skip",
+    "books",
+    "config",
+    "set",
+    "reserve",
+    "quit",
+)
 
 
 def now_iso() -> str:
@@ -38,7 +51,38 @@ def parse_cmd(line: str):
         return None
     if cmd == "skip":
         return (cmd, parts[1] if len(parts) > 1 else None)
+    if cmd == "set":
+        if len(parts) < 3:
+            return (cmd, None)
+        return (cmd, (parts[1], " ".join(parts[2:])))
+    if cmd == "reserve":
+        return (cmd, parts[1].lower() if len(parts) > 1 else None)
     return (cmd, None)
+
+
+def say_hold(reason: str) -> str:
+    """Plain-language HOLD line for the HUD."""
+    text = (reason or "").strip()
+    low = text.lower()
+    if low == "operator hold":
+        return "You paused new buys. Type go to start buying again."
+    if low == "books failed":
+        return "Could not read the account. Check API keys (POLY_ENV) and the network."
+    if "working" in low and "clip" in low:
+        return (
+            f"Not enough cash for a ticket (need at least ${risk.CLIP_MIN_USD:g}). "
+            "Deposit more, or type: set clip_min_usd 0.5"
+        )
+    if "session loss" in low:
+        return (
+            "Paused after this session lost too much. "
+            "Type quit and come back later, or: set max_day_loss_usd 10"
+        )
+    if "ticket_cap" in low:
+        return "Already at the maximum number of open tickets."
+    if "tape empty" in low or "rejected" in low or "already held" in low:
+        return "Waiting for a market that qualifies. Sitting in cash is normal."
+    return text
 
 
 def event(role: str, kind: str, **extra) -> None:
@@ -222,6 +266,7 @@ def hud() -> str:
     later_n = len(tape.get("later") or [])
     action = intent.get("action") or "?"
     reason = (intent.get("reason") or "")[:100]
+    human = say_hold(reason) if action == "HOLD" else reason
     nxt = intent.get("next")
     nxt_m = intent.get("next_min")
     why = intent.get("why") or []
@@ -236,8 +281,10 @@ def hud() -> str:
         f"{risk.VERSION}  {paths.code_rev()}  {now_iso()}  {'HOLD' if held() else 'BUYING'}  paper={paths.PAPER}  max_open={risk.MAX_OPEN}",
         f"BP {bp}  work {work}  ring {books.get('ring', risk.RING_USD)}  rsv {books.get('reserved') or 0}  open {len(opens)}/{risk.MAX_OPEN}  live {live_n} soon {soon_n} later {later_n}",
         f"tape {','.join(tape_lgs) or '-'}",
-        f"last {action}  {reason}",
+        f"last {action}  {human}",
     ]
+    if action == "HOLD" and human != reason and reason:
+        lines.append(f"     ({reason})")
     if nxt:
         lines.append(f"next {nxt} in {nxt_m}m")
     if why:
@@ -251,11 +298,13 @@ def hud() -> str:
 
 def print_help() -> None:
     print(
-        "commands: help status hold go reload skip <slug> books config quit\n"
+        "commands: help status hold go reload skip <slug> books config set reserve quit\n"
         "hold = pause new buys (seller stays up)\n"
         "go = resume buys\n"
         "reload = restart children after you edit this repo or desk.json (HOLD/go stays as-is)\n"
         "config = print live knobs (desk.json + overlay)\n"
+        "set <knob> <value> = change a knob now (writes overlay, then reloads)\n"
+        "reserve reset = forget the profit-reserve waterline (use after you deposit)\n"
         "quit = stop everything. Next start: python3 desk.py --go  if you want buys",
         flush=True,
     )
@@ -395,6 +444,28 @@ class Supervisor:
                 print(f"books failed {type(ex).__name__}", flush=True)
         elif cmd == "config":
             print(json.dumps(cfg.load(), indent=2), flush=True)
+        elif cmd == "set":
+            if not arg:
+                print("usage: set <knob> <value>   example: set clip_usd 1", flush=True)
+                print("knobs: " + " ".join(cfg.KEYS), flush=True)
+            else:
+                key, raw = arg
+                try:
+                    val, path = cfg.set_overlay(key, raw)
+                except KeyError:
+                    print(f"unknown knob {key!r}. type config", flush=True)
+                except ValueError:
+                    print(f"need a number for {key}", flush=True)
+                else:
+                    print(f"set {key}={val}  overlay {path}", flush=True)
+                    self.reload()
+        elif cmd == "reserve":
+            if arg != "reset":
+                print("usage: reserve reset", flush=True)
+            elif risk.reset_reserve():
+                print("reserve waterline cleared. next books() starts a new one.", flush=True)
+            else:
+                print("no reserve file — already clear.", flush=True)
         elif cmd == "quit":
             return False
         return True
@@ -433,7 +504,7 @@ class Supervisor:
 
 
 def main() -> None:
-    ap = argparse.ArgumentParser(description="v16 Polymarket US desk (terminal, no LLM)")
+    ap = argparse.ArgumentParser(description="v26 Polymarket US desk (terminal, no LLM)")
     ap.add_argument("--role", choices=["supervisor", "research"], default="supervisor")
     ap.add_argument("--no-buy", action="store_true", help="research + seller only")
     ap.add_argument("--paper", action="store_true", help="no live orders")

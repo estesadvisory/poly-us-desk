@@ -16,7 +16,12 @@ day.json
 skip_slugs.txt
 .env
 *.env
+!.env.example
 secrets/
+*.pem
+*.key
+id_ed25519
+id_ed25519.pub
 logs/
 HOLD
 supervisor.pid

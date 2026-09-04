@@ -40,7 +40,7 @@ def signed(method, path, e):
             "X-PM-Timestamp": ts,
             "X-PM-Signature": sig,
             "Content-Type": "application/json",
-            "User-Agent": "estes-desk/watch",
+            "User-Agent": "poly-us-desk/watch",
         },
     )
     with urllib.request.urlopen(req, timeout=12) as r:
@@ -48,7 +48,7 @@ def signed(method, path, e):
 
 
 def bbo(slug):
-    req = urllib.request.Request(PUB + f"/v1/markets/{slug}/bbo", headers={"User-Agent": "estes-desk/watch"})
+    req = urllib.request.Request(PUB + f"/v1/markets/{slug}/bbo", headers={"User-Agent": "poly-us-desk/watch"})
     with urllib.request.urlopen(req, timeout=8) as r:
         return json.loads(r.read().decode()).get("marketData") or {}
 

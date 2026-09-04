@@ -17,7 +17,6 @@ SKIP = DESK / "skip_slugs.txt"
 OUT = DESK / "intent.json"
 LAST_CUT = DESK / "last_cut"
 SESSION = DESK / "session.json"
-TICKET = risk.CLIP_USD
 MAX_OPEN = risk.MAX_OPEN
 
 
@@ -168,11 +167,12 @@ def main():
             }
         )
         return
-    if working < TICKET:
+    usd = risk.ticket_usd(working)
+    if usd is None:
         dump(
             {
                 "action": "HOLD",
-                "reason": f"working ${working} < clip ${TICKET}",
+                "reason": f"working ${working} < clip_min ${risk.CLIP_MIN_USD}",
                 "buyingPower": b.get("buyingPower"),
                 "working": working,
                 "open": [o.get("slug") for o in opens],
@@ -240,14 +240,14 @@ def main():
         {
             "action": "BUY",
             "slug": row["slug"],
-            "usd": TICKET,
+            "usd": usd,
             "ask": row.get("ask"),
             "rank": round(sc, 3),
             "live": row.get("live"),
             "soon": row.get("soon"),
             "minutes_to_start": row.get("minutes_to_start"),
             "reason": f"{row.get('title')} ask {row.get('ask')} spr {row.get('spr')} d {row.get('delta_c')} score {sc:.2f}",
-            "report": f"CoS BUY {row['slug']} ${TICKET} ask {row.get('ask')} score {sc:.1f}",
+            "report": f"CoS BUY {row['slug']} ${usd} ask {row.get('ask')} score {sc:.1f}",
             "version": risk.VERSION,
         }
     )

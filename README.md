@@ -1,35 +1,122 @@
-# poly-us-desk (v25)
+# poly-us-desk
 
-Polymarket **US** micro desk. Private. **No secrets in this repo.**
+A small **Polymarket US** trading desk that runs in a Terminal window. Python watches sports markets, buys a small ticket when a book qualifies, and sells on a stop or a trail. **No chatbot decides the trades.**
 
-Code: this git repo. State + logs: `~/.grok/desk` (override with `POLY_DESK`).
-Secrets: 1Password EstesDevOps login `polymarket-us` → `~/.grok/secrets/polymarket-us.env`.
+**You can lose the money you put on the venue.** This is not financial advice, not a product for sale, and not a “set it and forget it” money machine. Fees on Polymarket US are large enough that tiny scalps usually lose. Sitting in cash when nothing qualifies is the correct behavior.
 
-## Run (one Terminal)
+**United States venue only.** Use this with a Polymarket **US** account. Do not use a VPN or a “not a U.S. person” workaround with this code.
+
+License: [MIT](LICENSE). See [SECURITY.md](SECURITY.md) before you put keys on disk.
+
+## What you need
+
+1. A Mac or Linux computer with **Python 3** (3.10 or newer).
+2. A **Polymarket US** account with cash you can afford to lose.
+3. API keys from Polymarket US → **Settings → API keys** (a key id and a secret).
+4. Comfort typing a few commands in Terminal. You do not need to be a programmer.
+
+## Set up (once)
 
 ```bash
-cd ~/repos/poly-us-desk
-test -f ~/.grok/secrets/polymarket-us.env || { echo "NO ENV"; exit 1; }
-python3 desk.py --go     # arm buys (use this after a version bump)
+git clone https://github.com/estesadvisory/poly-us-desk.git
+cd poly-us-desk
 ```
 
-Commands in that same terminal: `help` `status` `hold` `go` `reload` `skip <slug>` `books` `config` `quit`
+Copy the example env file and fill in **your** keys. Do not email or commit that file.
 
-- `--go` — arm buys on start (required after quit + pull, or you sit on HOLD)
-- `--no-buy` — seller + research only (leftover tickets)
-- `--paper` — no live orders
+```bash
+cp env.example ~/.polymarket-us.env
+# edit ~/.polymarket-us.env in any text editor
+# put the key id and secret on the two lines — no quotes needed
+export POLY_ENV="$HOME/.polymarket-us.env"
+```
 
-Iteration: `hold` → edit this repo → `reload` (or `quit` and run again).
+The desk also looks at `~/.grok/secrets/polymarket-us.env` if you do not set `POLY_ENV`. Keep that file off git either way.
 
-Logs for later check-in: `~/.grok/desk/logs/` (`desk.log`, `events.jsonl`, `research.log`, `loop.log`, `watch.log`).
+Paper mode (no live orders) is available: add `--paper` when you start.
 
-## Roles
+## Run (one Terminal window)
 
-- `desk.py` — supervisor / HUD / commands (no LLM)
-- `research.py` — tape
-- `loop.py` — only **buyer**
-- `watch.py` — only **seller**
+```bash
+cd poly-us-desk
+export POLY_ENV="$HOME/.polymarket-us.env"   # if you used the path above
+python3 desk.py --go
+```
 
-`$0` ring floor (see `desk.json`). Clip $2. Working cash is the ticket cap. LIVE or ticking SOON `aec-` 2-way, 20–88¢, all operational US leagues.
-Entry: bid must have ticked up. Not dumping. Exit: stop −10¢ (or −8¢ cliff), trail +8¢. No 3-ways. No league-slot freeze.
-10% of profit above waterline ratchets into cash (`profit_reserve_pct`). Overlay: `~/.grok/desk/desk.json`.
+`--go` means “you may buy.” If you start without it, the desk watches and can sell, but it will not open new tickets until you type `go`.
+
+Leave that window open. Type commands there. Do not start extra copies of the buyer or seller by hand.
+
+### What you will see
+
+A short status block every few seconds:
+
+- **BUYING** — new tickets are allowed (the desk may still wait; that is normal).
+- **HOLD** — new buys are paused. The line under `last HOLD` says why, in plain language.
+- **BP** — buying power (cash the venue says you have).
+- **work** — cash the desk is allowed to spend after it parks a profit reserve.
+- **open** — tickets it is already in.
+
+If it says you do not have enough cash for a ticket, deposit on the venue, or type `set clip_min_usd 0.5` (smaller tickets cost more in fees).
+
+## Commands you can type
+
+| Type this | What it does |
+|-----------|----------------|
+| `help` | Print this list |
+| `status` | Show cash, open tickets, and why it is waiting |
+| `hold` | Pause new buys. Open tickets can still be sold. |
+| `go` | Allow buys again |
+| `reload` | Restart the workers after you change files |
+| `skip <market-id>` | Do not buy that market again this session |
+| `books` | Refresh the account snapshot |
+| `config` | Show the live settings |
+| `set <name> <number>` | Change a setting now (see below) |
+| `reserve reset` | After you **deposit** money, reset the profit-reserve line |
+| `quit` | Stop everything |
+
+Examples:
+
+```text
+set clip_usd 1
+set ask_hi 0.70
+reserve reset
+```
+
+`set` writes a local overlay (`~/.grok/desk/desk.json`, not this git repo) and reloads. Type `config` to confirm.
+
+## How it decides (short)
+
+Defaults live in `desk.json`. You can change them with `set` without editing the file.
+
+- Ticket size is **$2**, or whatever cash you have left down to **$1**.
+- It only looks at two-way US sports markets (`aec-`), live or about to start.
+- Ask between **20¢ and 75¢**, tight spread, bid must have **ticked up**.
+- Stop: down **10¢** from entry, or **8¢** in one print.
+- Winners: trail after **+8¢**, give back **3¢**. It will not sell a winner at or below the entry price.
+- If this session is down **$5**, it stops buying.
+- **10%** of profit above a waterline is parked so it is not all re-risked. After a deposit, type `reserve reset`.
+
+Idle cash on an empty tape is expected. That is not a crash.
+
+## After you update the code
+
+In the desk window: `quit`. Then:
+
+```bash
+git pull
+python3 desk.py --go
+```
+
+Starting without `--go` after an update leaves buys paused.
+
+## Files (you can ignore most of these)
+
+| Where | What |
+|-------|------|
+| This git repo | The program |
+| `desk.json` | Default settings |
+| `~/.grok/desk/` | Runtime state and logs (not git) |
+| `$POLY_ENV` | Your API keys (not git) |
+
+Developer notes: [DESIGN.md](DESIGN.md) (how it is built), [GO.md](GO.md) (operator start), [LESSONS.md](LESSONS.md) (why we do not revert old rules). Agents working this repo: [AGENTS.md](AGENTS.md).

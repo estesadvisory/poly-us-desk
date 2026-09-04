@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
-"""Desk v25. Knobs in desk.json. Ring 0 + 10% profit reserve.
+"""Desk v26. Knobs in desk.json. Ring 0 + 10% profit reserve.
 
-Not a dog-band religion. 20–88¢ is so there is a book to exit.
+Not a dog-band religion. 20–75¢ is so there is a book to exit.
 Dumping bids are rejected. LIVE leftover NS is not a buy. LIVE and SOON
 both need a bid uptick. Rank prefers a playable 25–70¢ book with an uptick.
 Trail arms at +8¢ so a winner can clear taker fees; never sell through entry.
+If working is below clip but at least clip_min, buy a smaller ticket.
 """
 from __future__ import annotations
 import json
@@ -13,7 +14,7 @@ from datetime import datetime, timezone
 import cfg
 import paths
 
-VERSION = "v25"
+VERSION = "v26"
 TWO_WAY_PREFIX = "aec-"
 BAN_PREFIX = "atc-"
 RESERVE_FILE = paths.DESK / "reserve.json"
@@ -21,12 +22,13 @@ RESERVE_FILE = paths.DESK / "reserve.json"
 RING_USD = 0.0
 PROFIT_RESERVE_PCT = 0.10
 CLIP_USD = 2.0
+CLIP_MIN_USD = 1.0
 MAX_USD = 2.0
 MAX_OPEN = 20
 BBO_PER_LEAGUE = 8
 SOON_MIN = 45
 OVERDUE_LIVE_MIN = 90
-ASK_TRADE = (0.20, 0.88)
+ASK_TRADE = (0.20, 0.75)
 MAX_SPREAD_LIVE = 0.04
 HARD_STOP = 0.10
 FAST_CRASH = 0.08
@@ -45,7 +47,7 @@ PLAYABLE = (0.25, 0.70)
 
 def apply_config(data=None) -> dict:
     """Copy desk.json into module globals. Reload after editing the file."""
-    global RING_USD, PROFIT_RESERVE_PCT, CLIP_USD, MAX_USD, MAX_OPEN, BBO_PER_LEAGUE
+    global RING_USD, PROFIT_RESERVE_PCT, CLIP_USD, CLIP_MIN_USD, MAX_USD, MAX_OPEN, BBO_PER_LEAGUE
     global SOON_MIN, OVERDUE_LIVE_MIN, ASK_TRADE, MAX_SPREAD_LIVE, HARD_STOP, FAST_CRASH
     global TRAIL_ARM, TRAIL_GIVEBACK, IDLE_SCAN_SEC, OPEN_SCAN_SEC, TAPE_STALE_SEC
     global HOT_MAX_AGE_SEC, FEE_COEF, BUY_COOLDOWN_SEC, MAX_DAY_LOSS, BOUNCE_PRIOR_C, PLAYABLE
@@ -53,6 +55,9 @@ def apply_config(data=None) -> dict:
     RING_USD = float(c.get("ring_usd", RING_USD))
     PROFIT_RESERVE_PCT = float(c.get("profit_reserve_pct", PROFIT_RESERVE_PCT))
     CLIP_USD = float(c.get("clip_usd", CLIP_USD))
+    CLIP_MIN_USD = float(c.get("clip_min_usd", CLIP_MIN_USD))
+    if CLIP_MIN_USD > CLIP_USD:
+        CLIP_MIN_USD = CLIP_USD
     MAX_USD = CLIP_USD
     MAX_OPEN = int(c.get("max_open", MAX_OPEN))
     BBO_PER_LEAGUE = int(c.get("bbo_per_league", BBO_PER_LEAGUE))
@@ -136,6 +141,22 @@ def compute_ring(bp: float, marked: float = 0.0, persist: bool = False) -> tuple
     return ring, rec
 
 
+def reset_reserve() -> bool:
+    """Delete the profit-reserve waterline (use after a deposit)."""
+    if not RESERVE_FILE.exists():
+        return False
+    RESERVE_FILE.unlink()
+    return True
+
+
+def ticket_usd(working: float) -> float | None:
+    """Full clip when there is room; a smaller ticket down to clip_min otherwise."""
+    cash = float(working or 0)
+    if cash < CLIP_MIN_USD:
+        return None
+    return round(min(CLIP_USD, cash), 2)
+
+
 apply_config()
 
 
@@ -173,7 +194,7 @@ def league(slug: str) -> str:
 
 
 def in_dog_band(ask: float) -> bool:
-    """Name kept for loop hot-cadence. Means tradable 20–88, not 18–42."""
+    """Name kept for loop hot-cadence. Means tradable ask band, not 18–42."""
     lo, hi = ASK_TRADE
     return lo <= float(ask or 0) <= hi
 

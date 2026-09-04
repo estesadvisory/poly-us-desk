@@ -10,6 +10,7 @@ KEYS = (
     "ring_usd",
     "profit_reserve_pct",
     "clip_usd",
+    "clip_min_usd",
     "max_open",
     "bbo_per_league",
     "soon_min",
@@ -33,6 +34,8 @@ KEYS = (
     "playable_hi",
 )
 
+INT_KEYS = frozenset({"max_open", "bbo_per_league"})
+
 REPO_FILE = paths.REPO / "desk.json"
 OVERLAY_FILE = paths.DESK / "desk.json"
 
@@ -53,3 +56,24 @@ def load() -> dict:
     data = _read(REPO_FILE)
     data.update(_read(OVERLAY_FILE))
     return data
+
+
+def coerce(key: str, raw: str):
+    """Parse a typed knob from the desk `set` command."""
+    if key not in KEYS:
+        raise KeyError(key)
+    text = str(raw).strip()
+    if key in INT_KEYS:
+        return int(float(text))
+    return float(text)
+
+
+def set_overlay(key: str, raw: str, dest: Path | None = None) -> tuple[object, Path]:
+    """Write one knob to the overlay file (not git). Returns (value, path)."""
+    val = coerce(key, raw)
+    path = dest or OVERLAY_FILE
+    path.parent.mkdir(parents=True, exist_ok=True)
+    data = _read(path)
+    data[key] = val
+    path.write_text(json.dumps(data, indent=2) + "\n")
+    return val, path
