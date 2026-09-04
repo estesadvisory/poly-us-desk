@@ -12,7 +12,7 @@ License: [MIT](LICENSE). See [SECURITY.md](SECURITY.md) before you put keys on d
 
 1. A Mac or Linux computer with **Python 3** (3.10 or newer).
 2. A **Polymarket US** account with cash you can afford to lose.
-3. API keys from Polymarket US → **Settings → API keys** (a key id and a secret).
+3. API keys from the [Polymarket US developer portal](https://polymarket.us/developer) (a key id and a secret). Official walkthrough: [Get your API keys](https://docs.polymarket.us/getting-started/quickstart).
 4. Comfort typing a few commands in Terminal. You do not need to be a programmer.
 
 ## Set up (once)
@@ -21,6 +21,8 @@ License: [MIT](LICENSE). See [SECURITY.md](SECURITY.md) before you put keys on d
 git clone https://github.com/estesadvisory/poly-us-desk.git
 cd poly-us-desk
 ```
+
+Create the key at [polymarket.us/developer](https://polymarket.us/developer) after you have a verified Polymarket US account ([step-by-step](https://docs.polymarket.us/getting-started/quickstart)). The secret is shown **once** — copy it immediately.
 
 Copy the example env file and fill in **your** keys. Do not email or commit that file.
 

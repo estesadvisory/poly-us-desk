@@ -9,7 +9,7 @@ The desk reads two environment variables from a file you keep **outside** this r
 - `POLYMARKET_KEY_ID`
 - `POLYMARKET_SECRET_KEY`
 
-Copy `env.example`, fill it in, and point `POLY_ENV` at that file. Never commit the filled-in copy. `.env` and `*.env` are gitignored.
+Create keys at [polymarket.us/developer](https://polymarket.us/developer). Official steps: [Get your API keys](https://docs.polymarket.us/getting-started/quickstart). Copy `env.example`, fill it in, and point `POLY_ENV` at that file. Never commit the filled-in copy. `.env` and `*.env` are gitignored.
 
 Do not paste keys into issues, pull requests, or chat.
 
