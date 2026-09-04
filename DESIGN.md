@@ -1,6 +1,6 @@
 # Desk v26 — architecture
 
-**Live version: v26.** Grok-operated. One Terminal: `python3 desk.py --go`. Zero LLM in the trade loop (Grok edits the repo; Python trades). Knobs: `desk.json`. Humans: `README.md`. Fork / PR: `CONTRIBUTING.md`.
+**Live version: v26.** Any AI agent. One Terminal: `python3 desk.py --go`. Zero LLM in the trade loop (an agent edits the repo; Python trades). Knobs: `desk.json`. Humans: `README.md`. Fork / PR: `CONTRIBUTING.md`.
 
 ## What we kept / dropped
 
