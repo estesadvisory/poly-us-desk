@@ -1,12 +1,27 @@
 # poly-us-desk
 
-A small **Polymarket US** trading desk that runs in a Terminal window. Python watches sports markets, buys a small ticket when a book qualifies, and sells on a stop or a trail. **No chatbot decides the trades.**
+A **Grok-operated** Polymarket **US** micro desk. Python watches sports markets, buys a small ticket when a book qualifies, and sells on a stop or a trail. **Grok does not place the orders.** It improves the code on a regular basis while the desk keeps running.
 
 **You can lose the money you put on the venue.** This is not financial advice, not a product for sale, and not a “set it and forget it” money machine. Fees on Polymarket US are large enough that tiny scalps usually lose. Sitting in cash when nothing qualifies is the correct behavior.
 
 **United States venue only.** Use this with a Polymarket **US** account. Do not use a VPN or a “not a U.S. person” workaround with this code.
 
+Want your own copy? **[Fork the repo](https://github.com/estesadvisory/poly-us-desk/fork).** Pull requests (including ones Grok or another agent wrote) are welcome — see [CONTRIBUTING.md](CONTRIBUTING.md).
+
 License: [MIT](LICENSE). See [SECURITY.md](SECURITY.md) before you put keys on disk.
+
+## How we use it (Grok)
+
+This is the loop we actually run:
+
+1. **Leave the desk on.** One Terminal, all day: `python3 desk.py --go`. Python is the trader. Do not put Grok in that process.
+2. **Let Grok improve the program.** On a regular basis (after a session, a losing day, or when something looks wrong) a Grok agent reads `DESIGN.md`, `LESSONS.md`, the HUD, and `~/.grok/desk/logs/`, then ships a small change through a GitHub issue and pull request.
+3. **Restart only after a merge.** In the desk window: `quit` → `git pull` → `python3 desk.py --go`. Starting without `--go` leaves buys paused.
+4. **Do not invent rules mid-session.** Live policy is `desk.json` + `DESIGN.md` + `VERSION`. History lives in `LESSONS.md` so the next Grok session does not repeat a starved tape or a fee-bill scalp.
+
+You can run the same loop with another AI agent. The point is: **the desk runs unattended; the agent edits the repo, not the live orders.**
+
+If you only want a personal desk, fork and point your Grok at the fork. You do not need a PR for that.
 
 ## What you need
 
@@ -121,4 +136,4 @@ Starting without `--go` after an update leaves buys paused.
 | `~/.grok/desk/` | Runtime state and logs (not git) |
 | `$POLY_ENV` | Your API keys (not git) |
 
-Developer notes: [DESIGN.md](DESIGN.md) (how it is built), [GO.md](GO.md) (operator start), [LESSONS.md](LESSONS.md) (why we do not revert old rules). Agents working this repo: [AGENTS.md](AGENTS.md).
+Developer notes: [DESIGN.md](DESIGN.md) (how it is built), [GO.md](GO.md) (operator start), [LESSONS.md](LESSONS.md) (why we do not revert old rules). Grok / other agents: [AGENTS.md](AGENTS.md). Contribute or fork: [CONTRIBUTING.md](CONTRIBUTING.md).
