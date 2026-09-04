@@ -10,14 +10,33 @@
 | v12 | — | last-trade + score AND-gates (starved) |
 | v13 | all operational US leagues | — |
 | v14 | reject dumping bids | — |
-| v15 | 12–88 exit-able, $10 ring, $2 × 2 | rank that preferred 50¢ fee-max |
+| v15 | 12–88 exit-able | rank that preferred 50¢ fee-max; 2-ticket freeze |
+| v16 | Terminal desk, HUD, HOLD/go | CoS TUI / `nohup` |
+| v17 | SOON ≤45m, MAX_OPEN=20 | 2-ticket cap |
+| v18 | trail never sells through entry | pregame TTR |
+| v19 | SOON uptick; `--go` after bump | — |
+| v20 | intent must not `--hot` the tape | (cold leagues — removed v22) |
+| v21 | −10¢ / −8¢ cliff; skip ≠ hide | −3¢ stop that sold winners |
+| v22 | — | league/sport cold flag |
+| v23 | no league slot; 20–88¢; 25–70 playable rank | 12–16¢ wrecks |
+| v24 | LIVE uptick too; leftover NS out; trail +8/−3 | LIVE first-print lottery |
+| v25 | `desk.json`; ring floor $0; 10% profit reserve | hardcoded $7 ring |
 | ledger | trail winners, stop losers, no 3-ways, no scratch | 1¢ scalps |
+
+## Never again
+
+Full table and day PnL: `LESSONS.md`. Short form:
+
+- No last-trade/score AND-gates, no 2-ticket cap, no league **cold**, no LIVE first-print, no intent `--hot`, no skip-hiding the tape, no 3-ways, no `nohup` children.
+- Do not starve the band (12–88 shrink / 18–42-only) or park so much that working < clip.
+- Trail must clear fees (+8 arm). Session-loss HOLD is not the operator HOLD file.
+- After merge: `python3 desk.py --go`. After a deposit: delete `~/.grok/desk/reserve.json`.
 
 ## Roles
 
 ```
 desk.py (Terminal)  →  HUD + commands + restart dead children
-research            →  all-league tape / --hot re-BBO
+research            →  all-league tape. `--hot` re-BBO only; **intent must not `--hot`** (v20 CS2 hole)
 loop.py             →  ONLY BUYER
 watch.py            →  ONLY SELLER  (4s on open tickets)
 orders.lock         →  one buy or cut at a time

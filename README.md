@@ -13,7 +13,7 @@ test -f ~/.grok/secrets/polymarket-us.env || { echo "NO ENV"; exit 1; }
 python3 desk.py --go     # arm buys (use this after a version bump)
 ```
 
-Commands in that same terminal: `help` `status` `hold` `go` `reload` `skip <slug>` `books` `quit`
+Commands in that same terminal: `help` `status` `hold` `go` `reload` `skip <slug>` `books` `config` `quit`
 
 - `--go` — arm buys on start (required after quit + pull, or you sit on HOLD)
 - `--no-buy` — seller + research only (leftover tickets)
