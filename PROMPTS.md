@@ -40,6 +40,7 @@ python3 desk.py --go
 Explain what BUYING and HOLD mean in one sentence each.
 Do not start extra copies of loop.py or watch.py.
 Do not change trading rules unless I ask.
+Do not ask me to paste my secret key or env file into this chat.
 ```
 
 ---
@@ -54,6 +55,7 @@ and whether I need to do anything.
 
 Do not change any files unless I ask. Do not invent new rules.
 If it is sitting in cash, tell me if that is normal.
+Do not ask me to paste my secret key or env file into this chat.
 ```
 
 (You can paste the status text under that prompt. Still do not paste keys.)
@@ -79,6 +81,7 @@ If you change code: open a GitHub issue first, then a branch and PR.
 Do not put an AI model inside the buy/sell loop.
 Do not invent trading rules. Idle cash on an empty tape is correct.
 After a merge I will type: quit  then  git pull  then  python3 desk.py --go
+Do not ask me to paste my secret key or env file into this chat.
 ```
 
 ---
@@ -111,6 +114,7 @@ Help me fork https://github.com/estesadvisory/poly-us-desk
 and run the fork with my own POLY_ENV keys.
 Do not open a pull request back to the original repo.
 Do not commit my .env or anything under ~/.grok/desk.
+Do not ask me to paste my secret key or env file into this chat.
 ```
 
 ---
@@ -127,6 +131,7 @@ python3 test_desk.py and python3 test_rank.py, then open a PR.
 AI-written changes are welcome. Say that an agent wrote this.
 Do not commit secrets. Do not put an LLM in the trade loop.
 Do not use a polymarket.com or VPN path.
+Do not ask me to paste my secret key or env file into this chat.
 ```
 
 ---
@@ -142,4 +147,5 @@ Then: python3 desk.py --go
 
 Confirm I must use --go or buys stay paused.
 Do not change trading rules. Do not start a second desk.
+Do not ask me to paste my secret key or env file into this chat.
 ```
