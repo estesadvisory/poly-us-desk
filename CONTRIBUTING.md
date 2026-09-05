@@ -2,6 +2,8 @@
 
 This repo is built for **any AI agent** (and any human). The live desk is Python. An agent is how the program gets better. Human and AI pull requests are both welcome. AI-written changes are **encouraged**, not a reason to reject a PR.
 
+If you are new: copy a prompt from [PROMPTS.md](PROMPTS.md) and paste it into any AI chat. You do not have to write the request yourself.
+
 ## If you want your own desk
 
 **Fork** this repository and run your fork. Point `POLY_ENV` at **your** Polymarket US keys. Do not open a PR just to keep a personal copy, a private overlay, or your fills.
