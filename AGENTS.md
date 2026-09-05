@@ -28,4 +28,4 @@ Multi-step work: issue → branch → PR → review → merge (not direct `main`
 
 ## Useful links
 
-- [README.md](README.md) (humans) · [CONTRIBUTING.md](CONTRIBUTING.md) · [DESIGN.md](DESIGN.md) · [GO.md](GO.md) · [LESSONS.md](LESSONS.md) · [RESTART.md](RESTART.md) · [SECURITY.md](SECURITY.md)
+- [README.md](README.md) (humans) · [PROMPTS.md](PROMPTS.md) (novice copy-paste) · [CONTRIBUTING.md](CONTRIBUTING.md) · [DESIGN.md](DESIGN.md) · [GO.md](GO.md) · [LESSONS.md](LESSONS.md) · [RESTART.md](RESTART.md) · [SECURITY.md](SECURITY.md)

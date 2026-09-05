@@ -21,6 +21,8 @@ This is the loop we actually run:
 
 The point: **the desk runs unattended; the agent edits the repo, not the live orders.** Grok, Claude, Cursor, Codex, or anything else is fine.
 
+New to this? Copy a ready-made prompt from [PROMPTS.md](PROMPTS.md) and paste it into any AI chat.
+
 If you only want a personal desk, fork and point your agent at the fork. You do not need a PR for that.
 
 ## What you need
@@ -136,4 +138,4 @@ Starting without `--go` after an update leaves buys paused.
 | `~/.grok/desk/` | Runtime state and logs (not git) |
 | `$POLY_ENV` | Your API keys (not git) |
 
-Developer notes: [DESIGN.md](DESIGN.md) (how it is built), [GO.md](GO.md) (operator start), [LESSONS.md](LESSONS.md) (why we do not revert old rules). Any agent: [AGENTS.md](AGENTS.md). Contribute or fork: [CONTRIBUTING.md](CONTRIBUTING.md).
+Developer notes: [DESIGN.md](DESIGN.md) (how it is built), [GO.md](GO.md) (operator start), [LESSONS.md](LESSONS.md) (why we do not revert old rules). Any agent: [AGENTS.md](AGENTS.md). Example prompts: [PROMPTS.md](PROMPTS.md). Contribute or fork: [CONTRIBUTING.md](CONTRIBUTING.md).
