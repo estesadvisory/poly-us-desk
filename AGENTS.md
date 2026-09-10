@@ -15,6 +15,8 @@ Code is this git repo. Runtime state and logs live under `~/.grok/desk` (overrid
 
 ## Delivery
 
+Cross-repo standards live in **[estesadvisory/portfolio-ops](https://github.com/estesadvisory/portfolio-ops)** ([DELIVERY](https://github.com/estesadvisory/portfolio-ops/blob/main/docs/DELIVERY.md), [ISSUE_FIRST](https://github.com/estesadvisory/portfolio-ops/blob/main/docs/ISSUE_FIRST.md)).
+
 Multi-step work: issue → branch → PR → review → merge (not direct `main`). Announce `Tracking: owner/repo#N`. Priority in titles: `[P0]`…`[P3]`. Implementing commits: `Refs #N` / `Fixes #N`. After PR: review, fix bugs on the same PR, then merge unless the human said `hold` / `wait` / `don't merge`. Never embed PATs in `git remote` URLs.
 
 ## Repo-specific non-negotiables
@@ -29,3 +31,4 @@ Multi-step work: issue → branch → PR → review → merge (not direct `main`
 ## Useful links
 
 - [README.md](README.md) (humans) · [PROMPTS.md](PROMPTS.md) (novice copy-paste) · [CONTRIBUTING.md](CONTRIBUTING.md) · [DESIGN.md](DESIGN.md) · [GO.md](GO.md) · [LESSONS.md](LESSONS.md) · [RESTART.md](RESTART.md) · [SECURITY.md](SECURITY.md)
+- Hub: https://github.com/estesadvisory/portfolio-ops · onboard https://github.com/estesadvisory/portfolio-ops/issues/156
